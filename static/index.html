@@ -1,0 +1,1734 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diabet Logger</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-gradient: linear-gradient(160deg, #0b0f14 0%, #131a24 100%);
+    --panel: #161d27;
+    --panel-2: #1f2835;
+    --panel-3: #2a3442;
+    --text: #e6eaf0;
+    --muted: #8b98a9;
+    --accent: #38bdf8;
+    --accent-strong: #0ea5e9;
+    --danger: #f43f5e;
+    --fast: #fbbf24;
+    --slow: #60a5fa;
+    --ketones: #c084fc;
+    --border: #2a3543;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+    --radius: 14px;
+    --radius-sm: 8px;
+    --transition: 0.2s ease;
+    --very-low: #b91c1c;
+    --low: #f97316;
+    --ok: #34d399;
+    --high: #fbbf24;
+    --very-high: #dc2626;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-gradient);
+    color: var(--text);
+    margin: 0;
+    padding: 16px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* Header */
+  .app-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .logo {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-left: auto;
+  }
+
+  .nav-link {
+    text-decoration: none;
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .nav-link:hover {
+    background: var(--panel-3);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--panel);
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+
+  .status .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--danger);
+    box-shadow: 0 0 6px rgba(244, 63, 94, 0.5);
+  }
+
+  .status.online .dot {
+    background: var(--ok);
+    box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
+  }
+
+  /* Panels */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition);
+  }
+
+  .panel:hover {
+    box-shadow: var(--shadow);
+  }
+
+  h2 {
+    font-size: 14px;
+    margin: 0 0 14px 0;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Stats */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition);
+    border-top: 3px solid var(--accent);
+  }
+
+  .stat:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+
+  .stat .label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .stat .value {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .stat .unit {
+    font-size: 13px;
+    color: var(--muted);
+    margin-left: 4px;
+    font-weight: 400;
+  }
+
+  /* Inputs */
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+
+  input, textarea, select {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color var(--transition), box-shadow var(--transition);
+  }
+
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15);
+  }
+
+  /* Buttons */
+  .btn {
+    background: var(--accent);
+    color: #0b0f14;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .btn:hover {
+    background: var(--accent-strong);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn.secondary {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn.secondary:hover {
+    background: var(--panel-3);
+    border-color: var(--accent);
+    box-shadow: none;
+  }
+
+  .btn.danger {
+    background: var(--danger);
+    color: white;
+  }
+
+  .btn.danger:hover {
+    background: #e11d48;
+    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3);
+  }
+
+  .btn.small {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th {
+    text-align: left;
+    padding: 10px 8px;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-2);
+  }
+
+  td {
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tr:hover {
+    background: var(--panel-2);
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .badge.bg { background: rgba(52, 211, 153, 0.12); color: var(--ok); }
+  .badge.bg.low { background: rgba(249, 115, 22, 0.12); color: var(--low); }
+  .badge.bg.very-low { background: rgba(185, 28, 28, 0.2); color: #fda4af; }
+  .badge.bg.high { background: rgba(251, 191, 36, 0.12); color: var(--high); }
+  .badge.bg.very-high { background: rgba(220, 38, 38, 0.25); color: #fda4af; }
+  .badge.fast { background: rgba(251, 191, 36, 0.12); color: var(--fast); }
+  .badge.slow { background: rgba(96, 165, 250, 0.12); color: var(--slow); }
+  .badge.ketones { background: rgba(192, 132, 252, 0.12); color: var(--ketones); }
+  .badge.ketones.warn { background: rgba(251, 191, 36, 0.18); color: var(--fast); }
+  .badge.ketones.danger { background: rgba(220, 38, 38, 0.25); color: #fda4af; }
+  .badge.meal { background: rgba(45, 212, 191, 0.12); color: #5eead4; }
+  .badge.activity { background: rgba(163, 230, 53, 0.12); color: #bef264; }
+  .badge.alcohol { background: rgba(251, 113, 133, 0.12); color: #fda4af; }
+  .badge.device-change { background: rgba(148, 163, 184, 0.15); color: #cbd5e1; }
+
+  /* Chart */
+  .chart-wrap {
+    position: relative;
+    height: 340px;
+  }
+
+  .filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn, .cgm-btn {
+    padding: 7px 14px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all var(--transition);
+  }
+
+  .filter-btn:hover, .cgm-btn:hover {
+    background: var(--panel-3);
+    color: var(--text);
+  }
+
+  .filter-btn.active {
+    background: var(--accent);
+    color: #0b0f14;
+    border-color: var(--accent);
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+  }
+
+  .cgm-btn.active {
+    background: #4a9eff;
+    color: #0b0f14;
+    border-color: #4a9eff;
+    font-weight: 600;
+  }
+
+  .badge.dp { background: rgba(56, 189, 248, 0.12); color: #7dd3fc; }
+  .dp-row td { background: rgba(56, 189, 248, 0.05); }
+  .dp-row:hover td { background: rgba(56, 189, 248, 0.10); }
+
+  /* zoom reset + day profile */
+  .zoom-btn { padding: 7px 14px; background: transparent; border: 1px dashed var(--border); color: var(--muted); border-radius: 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .zoom-btn:hover { color: var(--text); border-color: var(--accent); }
+  .chart-hint { font-size: 11px; color: var(--muted); margin: 0 0 10px 0; }
+  .dp-btn { padding: 9px 16px; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; font-size: 13px; cursor: pointer; font-family: inherit; transition: all var(--transition); }
+  .dp-btn:hover { background: var(--panel-3); }
+  .dp-btn.active { background: var(--accent); color: #0b0f14; border-color: var(--accent); font-weight: 600; }
+  .dp-resp { background: var(--panel-2); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; line-height: 1.7; margin-bottom: 12px; }
+  .dp-resp .dim { color: var(--muted); font-size: 12px; }
+  .dp-recent { font-size: 12px; color: var(--muted); margin-top: 12px; }
+
+  /* Tabs */
+  .tab-bar {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    background: var(--panel-2);
+    padding: 4px;
+    border-radius: var(--radius-sm);
+    width: fit-content;
+  }
+
+  .tab {
+    padding: 8px 16px;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all var(--transition);
+  }
+
+  .tab:hover {
+    color: var(--text);
+    background: var(--panel-3);
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: #0b0f14;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
+  }
+
+  .tab-content {
+    display: none;
+    animation: fadeIn 0.25s ease;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* TIR */
+  .tir-bar {
+    display: flex;
+    height: 36px;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 12px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .tir-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #0b0f14;
+    min-width: 0;
+    transition: all 0.3s ease;
+  }
+
+  .tir-seg.very-low { background: var(--very-low); color: white; }
+  .tir-seg.low { background: var(--low); color: white; }
+  .tir-seg.in-range { background: var(--ok); }
+  .tir-seg.high { background: var(--high); }
+  .tir-seg.very-high { background: var(--very-high); color: white; }
+
+  .tir-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .tir-legend div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+  }
+
+  .tir-legend .swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+  }
+
+  /* Custom datetime picker */
+  .dt-picker {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .dt-picker input[type="date"] {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dt-num {
+    width: 58px;
+    text-align: center;
+    padding: 10px 6px;
+  }
+
+  .dt-num::-webkit-inner-spin-button,
+  .dt-num::-webkit-outer-spin-button {
+    opacity: 1;
+  }
+
+  .dt-sep {
+    color: var(--muted);
+    font-weight: bold;
+    padding: 0 2px;
+  }
+
+  /* Notes inline editing */
+  .notes-cell {
+    max-width: 220px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .notes-editable {
+    cursor: pointer;
+  }
+
+  .notes-editable:hover .notes-text {
+    border-color: var(--accent);
+    background: var(--panel-3);
+  }
+
+  .notes-text {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px dashed transparent;
+    transition: all var(--transition);
+  }
+
+  .notes-empty {
+    opacity: 0.5;
+    font-style: italic;
+  }
+
+  .notes-edit-input {
+    background: var(--panel-3);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    border-radius: 6px;
+    font-family: inherit;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  /* Login overlay */
+  .login-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(11, 15, 20, 0.97);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    backdrop-filter: blur(4px);
+  }
+
+  .login-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    width: 340px;
+    max-width: 90vw;
+    box-shadow: var(--shadow);
+  }
+
+  .login-box h2 {
+    margin-top: 0;
+    justify-content: flex-start;
+  }
+
+  .login-box input {
+    margin-bottom: 12px;
+  }
+
+  .login-error {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 10px;
+    min-height: 18px;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--panel-3);
+    border: 1px solid var(--border);
+    padding: 12px 24px;
+    border-radius: 999px;
+    font-size: 13px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    box-shadow: var(--shadow);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast.error {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    body {
+      padding: 10px;
+    }
+    .app-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .nav-links {
+      margin-left: 0;
+      width: 100%;
+      justify-content: flex-start;
+    }
+    .notes-cell {
+      display: none;
+    }
+    .panel {
+      padding: 14px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="login" class="login-overlay" style="display:none">
+  <div class="login-box">
+    <h2>🩸 Diabet Logger</h2>
+    <label>Потребител</label>
+    <input type="text" id="login-user" autocomplete="username">
+    <label>Парола</label>
+    <input type="password" id="login-pass" autocomplete="current-password">
+    <button class="btn" style="width:100%" onclick="doLogin()">Вход</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<header class="app-header">
+  <div class="logo">🩸 Diabet Logger</div>
+  <div class="nav-links">
+    <a href="/meal" target="_blank" rel="noopener" class="nav-link" title="Хранене с XE калкулатор (в нов таб)">🍽 Хранене</a>
+    <a href="/report" target="_blank" rel="noopener" class="nav-link" title="Отчет за лекар (в нов таб)">📊 Отчет</a>
+    <a href="/print-review" target="_blank" rel="noopener" class="nav-link" title="Разпечатка за диетолог (в нов таб)">🩺 Диетолог</a>
+    <button class="nav-link" id="cgm-sync-btn" onclick="syncCgm()" style="cursor:pointer;font-family:inherit" title="Дърпа новите CGM показания от телефона и обновява записите">⟳ Обнови</button>
+    <span class="status" id="status" style="font-weight:400"><span class="dot"></span><span id="status-text">свързване...</span></span>
+  </div>
+</header>
+
+<div class="stats" id="stats"></div>
+
+<div class="panel">
+  <h2>Time-in-Range
+    <select id="tir-period" onchange="loadStats()" style="width:auto;padding:6px 10px;font-size:12px">
+      <option value="1">24 часа</option>
+      <option value="3">3 дни</option>
+      <option value="7">7 дни</option>
+      <option value="14" selected>14 дни</option>
+      <option value="30">30 дни</option>
+      <option value="90">90 дни</option>
+    </select>
+  </h2>
+  <div id="tir-content"></div>
+</div>
+
+<div class="panel">
+  <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:6px">Тип запис</label>
+  <select id="entry-type-select" style="width:100%;max-width:280px;margin-bottom:16px;padding:10px 12px;font-size:14px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px">
+    <option value="bg">Кръвна захар</option>
+    <option value="fast">Бърз инсулин</option>
+    <option value="slow">Бавен инсулин</option>
+    <option value="ketones">Кетони</option>
+    <option value="activity">Физическа активност</option>
+    <option value="alcohol">Алкохол</option>
+    <option value="device_change">Смяна на устройство</option>
+  </select>
+
+  <div class="tab-content active" data-tab="bg">
+    <div class="row">
+      <div><label>Стойност (mmol/L)</label><input type="number" id="bg-value" step="0.1" min="1" max="30" placeholder="напр. 7.2"></div>
+      <div><label>Дата и час</label><div class="dt-picker"><input type="date" id="bg-date"><input type="number" id="bg-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="bg-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
+    </div>
+    <div><label>Бележки (опц.)</label><input type="text" id="bg-notes" placeholder="преди закуска / след храна / ..."></div>
+    <div class="actions"><button class="btn" onclick="addEntry('bg')">Запиши</button></div>
+  </div>
+
+  <div class="tab-content" data-tab="fast">
+    <div class="row">
+      <div><label>Единици</label><input type="number" id="fast-value" step="0.5" min="0" max="50" placeholder="напр. 8"></div>
+      <div><label>Дата и час на дозата</label><div class="dt-picker"><input type="date" id="fast-date"><input type="number" id="fast-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="fast-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
+    </div>
+    <div class="row">
+      <div><label>Въглехидрати (г, опц.)</label><input type="number" id="fast-carbs" step="1" min="1" max="500" placeholder="напр. 45"></div>
+      <div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="fast-meal-time-toggle" onchange="document.getElementById('fast-meal-time-row').style.display = this.checked ? 'flex' : 'none'; if (this.checked) setNowInto('fast-meal');" style="width:auto">
+          Храненето започна в друг час
+        </label>
+      </div>
+    </div>
+    <div class="row" id="fast-meal-time-row" style="display:none">
+      <div><label>Начало на хранене</label><div class="dt-picker"><input type="date" id="fast-meal-date"><input type="number" id="fast-meal-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="fast-meal-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
+    </div>
+    <div><label>Бележки (опц.)</label><input type="text" id="fast-notes" placeholder="преди обяд / ..."></div>
+    <div class="actions"><button class="btn" onclick="addEntry('fast')">Запиши</button></div>
+  </div>
+
+  <div class="tab-content" data-tab="slow">
+    <div class="row">
+      <div><label>Единици</label><input type="number" id="slow-value" step="0.5" min="0" max="50" placeholder="напр. 20"></div>
+      <div><label>Дата и час</label><div class="dt-picker"><input type="date" id="slow-date"><input type="number" id="slow-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="slow-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
+    </div>
+    <div><label>Бележки (опц.)</label><input type="text" id="slow-notes" placeholder="нощна доза / ..."></div>
+    <div class="actions"><button class="btn" onclick="addEntry('slow')">Запиши</button></div>
+  </div>
+
+  <div class="tab-content" data-tab="ketones">
+    <div class="row">
+      <div><label>Кетони (mmol/L)</label><input type="number" id="ketones-value" step="0.1" min="0" max="10" placeholder="напр. 0.3"></div>
+      <div><label>Дата и час</label><div class="dt-picker"><input type="date" id="ketones-date"><input type="number" id="ketones-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="ketones-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
+    </div>
+    <div><label>Бележки (опц.)</label><input type="text" id="ketones-notes" placeholder="сутрин / повишена BG / ..."></div>
+    <div class="actions"><button class="btn" onclick="addEntry('ketones')">Запиши</button></div>
+    <div style="margin-top:10px;padding:10px 12px;background:var(--panel-2);border-radius:8px;font-size:12px;color:var(--muted)">
+      <strong style="color:var(--ok)">&lt; 0.6</strong> нормално ·
+      <strong style="color:var(--high)">0.6–1.5</strong> повишени ·
+      <strong style="color:var(--fast)">1.5–3.0</strong> риск от DKA ·
+      <strong style="color:var(--danger)">&gt; 3.0</strong> спешно
+    </div>
+  </div>
+
+  <div class="tab-content" data-tab="activity">
+    <div class="row">
+      <div><label>Продължителност (мин)</label><input type="number" id="activity-value" step="5" min="1" max="600" placeholder="напр. 30"></div>
+      <div><label>Дата и час</label><div class="dt-picker"><input type="date" id="activity-date"><input type="number" id="activity-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="activity-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
+    </div>
+    <div><label>Интензивност</label>
+      <select id="activity-intensity" style="width:100%;padding:8px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px">
+        <option value="light">Лека</option>
+        <option value="moderate">Умерена</option>
+        <option value="intense">Интензивна</option>
+      </select>
+    </div>
+    <div><label>Бележки (опц.)</label><input type="text" id="activity-notes" placeholder="разходка / плуване / ..."></div>
+    <div class="actions"><button class="btn" onclick="addEntry('activity')">Запиши</button></div>
+  </div>
+
+  <div class="tab-content" data-tab="alcohol">
+    <div class="row">
+      <div><label>Количество (единици)</label><input type="number" id="alcohol-value" step="0.5" min="0.5" max="20" placeholder="напр. 1"></div>
+      <div><label>Дата и час</label><div class="dt-picker"><input type="date" id="alcohol-date"><input type="number" id="alcohol-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="alcohol-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
+    </div>
+    <div><label>Бележки (опц.)</label><input type="text" id="alcohol-notes" placeholder="напр. 1 бира 0.5л / 1 чаша вино / ..."></div>
+    <div class="actions"><button class="btn" onclick="addEntry('alcohol')">Запиши</button></div>
+  </div>
+
+  <div class="tab-content" data-tab="device_change">
+    <div class="row">
+      <div><label>Устройство</label>
+        <select id="device_change-type" style="width:100%;padding:8px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px">
+          <option value="ampule">Ампула инсулин</option>
+          <option value="sensor">Сензор (CGM)</option>
+        </select>
+      </div>
+      <div><label>Дата и час</label><div class="dt-picker"><input type="date" id="device_change-date"><input type="number" id="device_change-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="device_change-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
+    </div>
+    <div><label>Бележки (опц.)</label><input type="text" id="device_change-notes" placeholder="напр. нова ампула Actrapid / ..."></div>
+    <div class="actions"><button class="btn" onclick="addEntry('device_change')">Запиши</button></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>График</h2>
+  <div class="filters">
+    <button class="filter-btn active" data-range="1">24ч</button>
+    <button class="filter-btn" data-range="3">3 дни</button>
+    <button class="filter-btn" data-range="7">7 дни</button>
+    <button class="filter-btn" data-range="30">30 дни</button>
+    <button class="filter-btn" data-range="all">Всички</button>
+  </div>
+  <div class="filters" style="margin-top:6px">
+    <button class="cgm-btn active" data-cgm="all">BG + CGM</button>
+    <button class="cgm-btn" data-cgm="manual">Само BG (ръчни)</button>
+    <button class="cgm-btn" data-cgm="cgm">Само CGM</button>
+    <button class="zoom-btn" onclick="resetChartZoom()" title="Връща целия избран период">⤢ Нулирай zoom</button>
+  </div>
+  <div class="chart-hint">Колелце / щипване = zoom по времето · влачене = преместване · CGM е тънката линия, ръчните измервания са точки</div>
+  <div class="chart-wrap"><canvas id="chart"></canvas></div>
+</div>
+
+<div class="panel">
+  <h2>Дневен профил
+    <input type="date" id="dp-date" onchange="dpDirty=false;loadDayPanel()" style="width:auto;padding:5px 10px;font-size:12px">
+  </h2>
+  <div class="chart-hint">Само за справка — не влияе на калкулаторите и на дозите.</div>
+  <div id="dp-response" class="dp-resp"></div>
+  <div class="actions" style="margin-top:0">
+    <button class="dp-btn" data-profile="fast" onclick="setDayProfile('fast')">🚀 Бърз</button>
+    <button class="dp-btn" data-profile="normal" onclick="setDayProfile('normal')">⚖️ Нормален</button>
+    <button class="dp-btn" data-profile="slow" onclick="setDayProfile('slow')">🐢 Бавен</button>
+    <button class="dp-btn" onclick="clearDayProfile()" title="Махни профила за деня">✕</button>
+  </div>
+  <div style="margin-top:12px"><label>Бележка за деня (опц.)</label>
+    <input type="text" id="dp-notes" maxlength="2000" placeholder="напр. плато 10-12 цял ден / силна активност" oninput="dpDirty=true"></div>
+  <div id="dp-recent" class="dp-recent"></div>
+</div>
+
+<div class="panel">
+  <h2>История</h2>
+  <div id="history"></div>
+</div>
+
+<div class="panel">
+  <h2>Настройки</h2>
+  <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:4px">
+    Грамове въглехидрати на 1 XE
+    <span style="font-size:12px;opacity:0.8">(препоръка на д-р Москова: 15г)</span>
+  </label>
+  <div class="actions" style="align-items:center;gap:8px">
+    <input type="number" id="xe-grams-input" step="0.5" min="1" max="99" style="width:90px" placeholder="12">
+    <button class="btn secondary" onclick="saveSettings()">Запази</button>
+    <span id="settings-status" style="font-size:12px;color:var(--muted)"></span>
+  </div>
+  <div id="tz-block" style="margin-top:18px">
+    <label style="font-size:13px;color:var(--muted);display:block;margin-bottom:4px">
+      Часова зона за дневните статистики и отчети
+      <span style="font-size:12px;opacity:0.8">(определя къде свършва денят; часовете, които виждаш и въвеждаш, следват устройството)</span>
+    </label>
+    <div class="actions" style="align-items:center;gap:8px">
+      <select id="tz-select" style="max-width:300px"></select>
+      <button class="btn secondary" onclick="saveTimezone()">Запази</button>
+      <button class="btn secondary" onclick="resetTimezone()" title="Връща стойността по подразбиране на сървъра">По подразбиране</button>
+    </div>
+    <div id="tz-status" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Данни</h2>
+  <div class="actions">
+    <button class="btn secondary" onclick="exportJSON()">Export JSON</button>
+    <button class="btn secondary" onclick="document.getElementById('import-file').click()">Import JSON</button>
+    <button class="btn secondary" onclick="exportCSV()">Export CSV</button>
+    <button class="btn danger" onclick="clearAll()">Изтрий всичко</button>
+    <button class="btn secondary" onclick="logout()" id="logout-btn" style="display:none">Изход</button>
+    <button class="btn secondary" onclick="setApiKey()" id="apikey-btn">API Key...</button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ============= API CLIENT =============
+const API = '/api';
+let entries = [];
+let statsData = null;
+let currentRange = 1;
+let cgmMode = 'all'; // 'all' | 'manual' | 'cgm'
+let editingNotes = false; // true while a notes field is being actively edited, pauses auto-refresh
+let chartReset = true;    // next renderChart() builds a fresh chart (range / CGM-mode change); otherwise update in place so zoom survives
+let dpDirty = false;      // user is typing a day note — don't overwrite it on refresh
+let syncing = false;      // a CGM pull is in flight
+let dayProfiles = {};     // 'YYYY-MM-DD' -> {profile, notes}, shown as a row in the history
+const AUTO_SYNC_CGM = false; // true = every auto-refresh also runs /cgm-sync (pulls from the phone); false = auto-refresh only reloads from the DB
+
+function isCgm(e) {
+  return (e.notes || '').includes('[CGM]');
+}
+
+function visibleEntries() {
+  if (cgmMode === 'all') return entries;
+  return entries.filter(e => {
+    if (e.type !== 'bg') return true; // only bg entries can be CGM-tagged
+    return cgmMode === 'cgm' ? isCgm(e) : !isCgm(e);
+  });
+}
+let chart = null;
+let authMode = null; // 'login', 'apikey', or 'open'
+
+function getToken() { return localStorage.getItem('diabet_token') || ''; }
+function setToken(t) { localStorage.setItem('diabet_token', t); }
+function clearToken() { localStorage.removeItem('diabet_token'); }
+function getApiKey() { return localStorage.getItem('diabet_api_key') || ''; }
+function setApiKey() {
+  const k = prompt('API Key (празно = без API key):', getApiKey());
+  if (k === null) return;
+  localStorage.setItem('diabet_api_key', k);
+  reload();
+}
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}) };
+  const key = getApiKey();
+  const tok = getToken();
+  if (key) headers['X-API-Key'] = key;
+  if (tok) headers['Authorization'] = 'Bearer ' + tok;
+  const res = await fetch(API + path, { ...opts, headers });
+  if (res.status === 401) {
+    if (authMode === 'login') {
+      clearToken();
+      showLogin();
+    }
+    throw new Error('Unauthorized');
+  }
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`${res.status}: ${t}`);
+  }
+  return res.status === 204 ? null : res.json();
+}
+
+// ============= LOGIN =============
+async function checkAuthMode() {
+  const res = await fetch(API + '/health');
+  const h = await res.json();
+  if (h.auth.login) authMode = 'login';
+  else if (h.auth.api_key) authMode = 'apikey';
+  else authMode = 'open';
+  document.getElementById('logout-btn').style.display = authMode === 'login' ? '' : 'none';
+  document.getElementById('apikey-btn').style.display = authMode === 'apikey' ? '' : 'none';
+  return h;
+}
+
+function showLogin() {
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('login-user').focus();
+}
+function hideLogin() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('login-error').textContent = '';
+}
+async function doLogin() {
+  const username = document.getElementById('login-user').value;
+  const password = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  try {
+    const res = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'грешка');
+    const data = await res.json();
+    setToken(data.token);
+    document.getElementById('login-pass').value = '';
+    hideLogin();
+    reload();
+  } catch(e) { err.textContent = 'Грешен потребител или парола'; }
+}
+function logout() {
+  clearToken();
+  showLogin();
+}
+
+// ============= HELPERS =============
+function nowLocalParts() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
+    hour: d.getHours(),
+    min: d.getMinutes(),
+  };
+}
+function setNowInto(type) {
+  const p = nowLocalParts();
+  document.getElementById(`${type}-date`).value = p.date;
+  document.getElementById(`${type}-hour`).value = p.hour;
+  document.getElementById(`${type}-min`).value = p.min;
+}
+function readDatetime(type) {
+  const date = document.getElementById(`${type}-date`).value;
+  const hourRaw = document.getElementById(`${type}-hour`).value;
+  const minRaw = document.getElementById(`${type}-min`).value;
+  if (!date || hourRaw === '' || minRaw === '') return null;
+  const hour = parseInt(hourRaw, 10);
+  const min = parseInt(minRaw, 10);
+  if (isNaN(hour) || isNaN(min) || hour < 0 || hour > 23 || min < 0 || min > 59) return null;
+  const pad = n => String(n).padStart(2, '0');
+  // Local time -> Date -> ISO (UTC). Backend accepts either.
+  return new Date(`${date}T${pad(hour)}:${pad(min)}:00`);
+}
+function fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+function bgClass(v) {
+  if (v < 3.0) return 'very-low';
+  if (v < 3.9) return 'low';
+  if (v > 13.9) return 'very-high';
+  if (v > 10.0) return 'high';
+  return '';
+}
+function ketoneClass(v) {
+  if (v >= 3.0) return 'danger';
+  if (v >= 0.6) return 'warn';
+  return '';
+}
+function bgColor(v) {
+  if (v < 3.0) return 'var(--very-low)';
+  if (v < 3.9) return 'var(--low)';
+  if (v > 13.9) return 'var(--very-high)';
+  if (v > 10.0) return 'var(--high)';
+  return 'var(--ok)';
+}
+
+function setStatus(ok, text) {
+  const el = document.getElementById('status');
+  el.classList.toggle('online', ok);
+  document.getElementById('status-text').textContent = text;
+}
+
+async function loadSettings() {
+  try {
+    const s = await api('/settings');
+    document.getElementById('xe-grams-input').value = s.xe_grams_carbs;
+  } catch(e) { /* тихо - настройките не са критични за начално зареждане */ }
+}
+
+async function saveSettings() {
+  const val = parseFloat(document.getElementById('xe-grams-input').value);
+  const statusEl = document.getElementById('settings-status');
+  if (!val || val <= 0 || val >= 100) {
+    statusEl.textContent = 'Невалидна стойност (1-99)';
+    statusEl.style.color = 'var(--danger)';
+    return;
+  }
+  try {
+    await api('/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ xe_grams_carbs: val })
+    });
+    statusEl.textContent = 'Запазено ✓';
+    statusEl.style.color = 'var(--ok)';
+    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+  } catch(e) {
+    if (e.message !== 'Unauthorized') {
+      statusEl.textContent = 'Грешка: ' + e.message;
+      statusEl.style.color = 'var(--danger)';
+    }
+  }
+}
+
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', isError);
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ============= ACTIONS =============
+async function addEntry(type) {
+  let val;
+  if (type === 'device_change') {
+    val = 0; // device_change няма реална числова стойност
+  } else {
+    val = parseFloat(document.getElementById(`${type}-value`).value);
+    if (!val && val !== 0) { toast('Стойността е задължителна', true); return; }
+  }
+
+  const dt = readDatetime(type);
+  if (!dt) { toast('Невалидна дата или час', true); return; }
+  const notes = document.getElementById(`${type}-notes`).value;
+
+  const payload = { type, value: val, time: dt.toISOString(), notes };
+
+  if (type === 'activity') {
+    payload.meta = { intensity: document.getElementById('activity-intensity').value };
+  }
+  if (type === 'device_change') {
+    payload.meta = { device_type: document.getElementById('device_change-type').value };
+  }
+  if (type === 'fast') {
+    const carbsRaw = document.getElementById('fast-carbs').value;
+    if (carbsRaw) payload.carbs_g = parseFloat(carbsRaw);
+    const mealToggle = document.getElementById('fast-meal-time-toggle');
+    if (mealToggle.checked) {
+      const mealDt = readDatetime('fast-meal');
+      if (!mealDt) { toast('Невалиден час за начало на хранене', true); return; }
+      payload.meal_time = mealDt.toISOString();
+    }
+  }
+
+  try {
+    await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
+    if (type !== 'device_change') document.getElementById(`${type}-value`).value = '';
+    document.getElementById(`${type}-notes`).value = '';
+    if (type === 'fast') {
+      document.getElementById('fast-carbs').value = '';
+      document.getElementById('fast-meal-time-toggle').checked = false;
+      document.getElementById('fast-meal-time-row').style.display = 'none';
+    }
+    setNowInto(type);
+    await reload();
+    toast('Записано');
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+async function deleteEntry(id) {
+  if (!confirm('Изтрий запис?')) return;
+  try {
+    await api(`/entries/${id}`, { method: 'DELETE' });
+    await reload();
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+// Дърпаме само избрания период, не цялата база. При CGM (~288 записа/ден)
+// default-ният 24ч изглед сваля ~290 реда вместо няколко десетки хиляди.
+function entriesPath() {
+  if (currentRange === 'all') return '/entries?limit=20000';
+  const from = new Date(Date.now() - currentRange * 86400000).toISOString();
+  return `/entries?limit=20000&from=${encodeURIComponent(from)}`;
+}
+
+async function reload() {
+  try {
+    entries = await api(entriesPath());
+    await loadDayProfiles();
+    setStatus(true, `онлайн · ${entries.length} записа`);
+    await loadStats();
+    render();
+    loadDayPanel();
+  } catch(e) {
+    if (e.message !== 'Unauthorized') {
+      setStatus(false, 'офлайн');
+      toast('Грешка: ' + e.message, true);
+    }
+  }
+}
+
+async function loadStats() {
+  const days = parseInt(document.getElementById('tir-period').value);
+  try {
+    statsData = await api(`/stats?days=${days}`);
+    renderTIR();
+  } catch(e) { /* silent */ }
+}
+
+// ============= RENDER: STATS ROW =============
+function renderStats() {
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+  const ve = visibleEntries();
+  const bgAll = ve.filter(e => e.type === 'bg');
+  const last24 = bgAll.filter(e => now - new Date(e.time).getTime() < day);
+  const latest = bgAll.slice().sort((a,b) => new Date(b.time) - new Date(a.time))[0];
+  const latestKetones = ve.filter(e => e.type === 'ketones').sort((a,b) => new Date(b.time) - new Date(a.time))[0];
+  const avg24 = last24.length ? (last24.reduce((s,e)=>s+e.value,0)/last24.length).toFixed(1) : '—';
+  const fast24 = ve.filter(e => e.type==='fast' && now - new Date(e.time).getTime() < day).reduce((s,e)=>s+e.value,0);
+  const slow24 = ve.filter(e => e.type==='slow' && now - new Date(e.time).getTime() < day).reduce((s,e)=>s+e.value,0);
+
+  const gmiHtml = (statsData && statsData.gmi_pct != null)
+    ? `<div class="stat"><div class="label">GMI (≈HbA1c)</div><div class="value">${statsData.gmi_pct}<span class="unit">% · ${statsData.days}д</span></div></div>`
+    : '';
+  const ketoneHtml = latestKetones
+    ? `<div class="stat"><div class="label">Последни кетони</div><div class="value" style="color:${latestKetones.value >= 3 ? 'var(--danger)' : latestKetones.value >= 0.6 ? 'var(--high)' : 'var(--ok)'}">${latestKetones.value}<span class="unit">mmol/L</span></div></div>`
+    : '';
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="label">Последна BG</div><div class="value" style="color:${latest ? bgColor(latest.value) : 'var(--muted)'}">${latest ? latest.value : '—'}<span class="unit">mmol/L</span></div></div>
+    <div class="stat"><div class="label">Средна 24ч</div><div class="value">${avg24}<span class="unit">mmol/L</span></div></div>
+    ${gmiHtml}
+    <div class="stat"><div class="label">Бърз 24ч</div><div class="value" style="color:var(--fast)">${fast24}<span class="unit">U</span></div></div>
+    <div class="stat"><div class="label">Бавен 24ч</div><div class="value" style="color:var(--slow)">${slow24}<span class="unit">U</span></div></div>
+    ${ketoneHtml}
+  `;
+}
+
+// ============= RENDER: TIR =============
+function renderTIR() {
+  const el = document.getElementById('tir-content');
+  if (!statsData || statsData.bg_count === 0) {
+    el.innerHTML = '<div class="empty">Няма BG записи за този период</div>';
+    return;
+  }
+  const p = statsData.tir_pct;
+  const segs = [
+    { k: 'very_low', cls: 'very-low', label: '<3.0' },
+    { k: 'low', cls: 'low', label: '3.0–3.8' },
+    { k: 'in_range', cls: 'in-range', label: '3.9–10.0' },
+    { k: 'high', cls: 'high', label: '10.1–13.9' },
+    { k: 'very_high', cls: 'very-high', label: '>13.9' }
+  ];
+  const bar = segs.map(s => {
+    const pct = p[s.k];
+    return pct > 0 ? `<div class="tir-seg ${s.cls}" style="flex:${pct}" title="${s.label} mmol/L: ${pct}%">${pct >= 8 ? pct.toFixed(0)+'%' : ''}</div>` : '';
+  }).join('');
+  const legend = segs.map(s =>
+    `<div><span class="swatch" style="background:var(--${s.cls==='in-range'?'ok':s.cls})"></span>${s.label}: <strong style="color:var(--text)">${p[s.k]}%</strong></div>`
+  ).join('');
+
+  const targetOk = p.in_range >= 70;
+  const targetLow = (p.very_low + p.low) < 4;
+  const cv = statsData.cv_pct;
+
+  el.innerHTML = `
+    <div class="tir-bar">${bar}</div>
+    <div class="tir-legend">${legend}</div>
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;font-size:13px">
+      <div><span style="color:var(--muted)">Средна BG:</span> <strong>${statsData.mean_bg} mmol/L</strong></div>
+      <div><span style="color:var(--muted)">SD:</span> <strong>${statsData.std_bg}</strong></div>
+      <div><span style="color:var(--muted)">CV:</span> <strong style="color:${cv<36?'var(--ok)':'var(--high)'}">${cv}%</strong> <span style="color:var(--muted);font-size:11px">(цел &lt;36%)</span></div>
+      <div><span style="color:var(--muted)">GMI:</span> <strong>${statsData.gmi_pct}%</strong></div>
+      <div><span style="color:var(--muted)">BG измервания:</span> <strong>${statsData.bg_count}</strong></div>
+      <div><span style="color:var(--muted)">Бърз/ден:</span> <strong style="color:var(--fast)">${statsData.insulin_total.daily_avg_fast} U</strong></div>
+      <div><span style="color:var(--muted)">Бавен/ден:</span> <strong style="color:var(--slow)">${statsData.insulin_total.daily_avg_slow} U</strong></div>
+    </div>
+    <div style="margin-top:12px;padding:10px 12px;background:var(--panel-2);border-radius:8px;font-size:12px;color:var(--muted)">
+      Цел: <strong style="color:${targetOk?'var(--ok)':'var(--high)'}">TIR &gt; 70%</strong> ·
+      <strong style="color:${targetLow?'var(--ok)':'var(--danger)'}">Хипо &lt; 4%</strong> ·
+      GMI е оценка (Bergenstal 2018), не заменя лабораторно HbA1c.
+    </div>
+  `;
+}
+
+// ============= RENDER: CHART =============
+const CGM_GAP_MS = 30 * 60 * 1000;  // break the CGM line over sensor gaps longer than this
+
+function thinPoints(points, bucketMs) {
+  if (!bucketMs) return points;
+  const out = [];
+  let last = -Infinity;
+  for (const p of points) {
+    if (p.x - last >= bucketMs) { out.push(p); last = p.x; }
+  }
+  return out;
+}
+
+function buildChartData() {
+  const cutoff = currentRange === 'all' ? 0 : Date.now() - currentRange * 24 * 60 * 60 * 1000;
+  const ve = visibleEntries();
+  const pt = e => ({ x: new Date(e.time).getTime(), y: e.value });
+  const pick = (type, cgm) => ve
+    .filter(e => e.type === type && new Date(e.time).getTime() >= cutoff && (cgm === undefined || isCgm(e) === cgm))
+    .map(pt).sort((a, b) => a.x - b.x);
+
+  // thin dense CGM data on long ranges so the chart stays fast
+  const bucketMin = currentRange === 'all' ? 60 : currentRange >= 30 ? 30 : currentRange >= 7 ? 15 : 0;
+  const bucketMs = bucketMin * 60 * 1000;
+  const cgm = thinPoints(pick('bg', true), bucketMs);
+  // A gap = a real sensor outage. After thinning, neighbours are >= one bucket apart by design,
+  // so the threshold must scale with the bucket or the line breaks between every two points.
+  const gapMs = Math.max(CGM_GAP_MS, bucketMs * 2.5);
+  const cgmLine = [];
+  cgm.forEach((p, i) => {
+    if (i > 0 && p.x - cgm[i - 1].x > gapMs) cgmLine.push({ x: cgm[i - 1].x + 1, y: null });
+    cgmLine.push(p);
+  });
+  return { cgm: cgmLine, bg: pick('bg', false), ketones: pick('ketones'), fast: pick('fast'), slow: pick('slow') };
+}
+
+function renderChart() {
+  const d = buildChartData();
+  const forceNew = chartReset;
+  chartReset = false;
+  // Update in place when possible, so zoom/pan survive the auto-refresh.
+  if (chart && !forceNew) {
+    chart.data.datasets[0].data = d.cgm;
+    chart.data.datasets[1].data = d.bg;
+    chart.data.datasets[1].showLine = d.cgm.length === 0;
+    chart.data.datasets[2].data = d.ketones;
+    chart.data.datasets[3].data = d.fast;
+    chart.data.datasets[4].data = d.slow;
+    chart.update('none');
+    return;
+  }
+  if (chart) chart.destroy();
+  if (window.ChartZoom) Chart.register(window.ChartZoom);  // no-op if already auto-registered
+  chart = new Chart(document.getElementById('chart').getContext('2d'), {
+    type: 'line',
+    data: {
+      datasets: [
+        { label: 'CGM (mmol/L)', data: d.cgm, borderColor: '#4ade80', backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 3, tension: 0.2, spanGaps: false, yAxisID: 'y' },
+        { label: 'BG ръчно (mmol/L)', data: d.bg, borderColor: '#4ade80', backgroundColor: 'rgba(74, 222, 128, 0.1)', borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, tension: 0.3, showLine: d.cgm.length === 0, yAxisID: 'y' },
+        { label: 'Кетони (mmol/L)', data: d.ketones, borderColor: '#a855f7', backgroundColor: '#a855f7', borderWidth: 0, pointRadius: 5, pointStyle: 'star', showLine: false, yAxisID: 'y' },
+        { label: 'Бърз (U)', data: d.fast, borderColor: '#f59e0b', backgroundColor: '#f59e0b', borderWidth: 0, pointRadius: 6, pointStyle: 'triangle', showLine: false, yAxisID: 'y1' },
+        { label: 'Бавен (U)', data: d.slow, borderColor: '#3b82f6', backgroundColor: '#3b82f6', borderWidth: 0, pointRadius: 6, pointStyle: 'rectRot', showLine: false, yAxisID: 'y1' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#e6eaf0' } },
+        tooltip: { callbacks: { title: (items) => new Date(items[0].parsed.x).toLocaleString('bg-BG') } },
+        zoom: {
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
+          pan: { enabled: true, mode: 'x' },
+          limits: { x: { min: 'original', max: 'original' } }
+        }
+      },
+      scales: {
+        x: { type: 'time', time: { tooltipFormat: 'dd.MM HH:mm', displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'dd.MM' } }, ticks: { color: '#8b98a9' }, grid: { color: '#2a3543' } },
+        y: { position: 'left', title: { display: true, text: 'mmol/L', color: '#8b98a9' }, ticks: { color: '#8b98a9' }, grid: { color: '#2a3543' }, suggestedMin: 3, suggestedMax: 15 },
+        y1: { position: 'right', title: { display: true, text: 'Инсулин (U)', color: '#8b98a9' }, ticks: { color: '#8b98a9' }, grid: { drawOnChartArea: false }, suggestedMin: 0 }
+      }
+    }
+  });
+}
+
+function resetChartZoom() {
+  if (chart && chart.resetZoom) chart.resetZoom();
+}
+
+// ============= RENDER: HISTORY =============
+function renderHistory() {
+  const all = visibleEntries().slice().sort((a,b) => new Date(b.time) - new Date(a.time)).slice(0, 200);
+  if (!all.length) {
+    document.getElementById('history').innerHTML = '<div class="empty">Няма записи още</div>';
+    return;
+  }
+  let lastDay = null;
+  document.getElementById('history').innerHTML = `
+    <table>
+      <thead><tr><th>Кога</th><th>Тип</th><th>Стойност</th><th class="notes-cell">Бележки</th><th></th></tr></thead>
+      <tbody>
+        ${all.map(e => {
+          // newest-first list: put the day-profile row right before the first (newest) entry of that day
+          const day = localDayOf(e.time);
+          let dpRow = '';
+          if (day !== lastDay) { lastDay = day; if (dayProfiles[day]) dpRow = dayProfileRow(day, dayProfiles[day]); }
+          let type, value, cls;
+          if (e.type === 'bg') { type = 'BG'; value = `${e.value} mmol/L`; cls = 'bg ' + bgClass(e.value); }
+          else if (e.type === 'fast') { type = 'Бърз'; value = `${e.value} U`; cls = 'fast'; }
+          else if (e.type === 'slow') { type = 'Бавен'; value = `${e.value} U`; cls = 'slow'; }
+          else if (e.type === 'ketones') { type = 'Кетони'; value = `${e.value} mmol/L`; cls = 'ketones ' + ketoneClass(e.value); }
+          else if (e.type === 'meal') { type = 'Хранене'; value = `${e.value} XE`; cls = 'meal'; }
+          else if (e.type === 'activity') {
+            type = 'Активност';
+            const intensity = e.meta && e.meta.intensity ? ` (${({light:'лека',moderate:'умерена',intense:'интензивна'})[e.meta.intensity] || e.meta.intensity})` : '';
+            value = `${e.value} мин${intensity}`;
+            cls = 'activity';
+          }
+          else if (e.type === 'alcohol') { type = 'Алкохол'; value = `${e.value} ед.`; cls = 'alcohol'; }
+          else if (e.type === 'device_change') {
+            type = 'Смяна устройство';
+            const deviceLabels = { ampule: 'Ампула', sensor: 'Сензор' };
+            value = e.meta && e.meta.device_type ? (deviceLabels[e.meta.device_type] || e.meta.device_type) : '—';
+            cls = 'device-change';
+          }
+          else { type = e.type; value = `${e.value}`; cls = ''; }
+          const notesEsc = (e.notes || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+          const notesDisplay = e.notes
+            ? `<span class="notes-text">${notesEsc}</span>`
+            : `<span class="notes-text notes-empty">＋ добави бележка</span>`;
+          return dpRow + `<tr>
+            <td>${fmtTime(e.time)}</td>
+            <td><span class="badge ${cls}">${type}</span></td>
+            <td><strong>${value}</strong></td>
+            <td class="notes-cell notes-editable" data-id="${e.id}" title="Клик за редакция">${notesDisplay}</td>
+            <td><button class="btn small danger" onclick="deleteEntry(${e.id})">×</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+  // Wire up click-to-edit on all notes cells
+  document.querySelectorAll('.notes-editable').forEach(cell => {
+    cell.addEventListener('click', () => startEditNotes(cell));
+  });
+}
+
+function startEditNotes(cell) {
+  if (cell.querySelector('input')) return;  // already editing
+  const id = parseInt(cell.dataset.id);
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  const currentText = entry.notes || '';
+  cell.innerHTML = `<input type="text" class="notes-edit-input" value="${currentText.replace(/"/g,'&quot;')}" maxlength="2000" style="width:100%;padding:4px 8px;font-size:12px">`;
+  const input = cell.querySelector('input');
+  input.focus();
+  input.setSelectionRange(input.value.length, input.value.length);
+  editingNotes = true;
+
+  let done = false;
+  const finish = async (save) => {
+    if (done) return;
+    done = true;
+    editingNotes = false;
+    const newVal = input.value.trim();
+    if (!save || newVal === currentText) {
+      renderHistory();  // revert to display
+      return;
+    }
+    try {
+      await api(`/entries/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ notes: newVal })
+      });
+      const idx = entries.findIndex(e => e.id === id);
+      if (idx !== -1) entries[idx].notes = newVal;
+      renderHistory();
+      toast('Бележката е запазена');
+    } catch(e) {
+      if (e.message !== 'Unauthorized') toast(e.message, true);
+      renderHistory();
+    }
+  };
+
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+    else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+  });
+  input.addEventListener('blur', () => finish(true));
+}
+
+function render() { renderStats(); renderChart(); renderHistory(); }
+
+// ============= DAY PROFILE (reference only) =============
+const DP_LABEL = { fast: '🚀 Бърз', normal: '⚖️ Нормален', slow: '🐢 Бавен' };
+
+function localDayOf(iso) {
+  const d = new Date(iso);
+  const pad = x => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+async function loadDayProfiles() {
+  try {
+    const from = currentRange === 'all' ? '' : `?from=${shiftDay(nowLocalParts().date, -(currentRange + 1))}`;
+    const list = await api('/day-profiles' + from);
+    dayProfiles = Object.fromEntries(list.map(p => [p.date, p]));
+  } catch (e) { dayProfiles = {}; }  // backend not patched yet / offline — history just shows no profile rows
+}
+
+function dayProfileRow(day, dp) {
+  const esc = t => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  return `<tr class="dp-row" onclick="openDayProfile('${day}')" style="cursor:pointer" title="Отвори в „Дневен профил“">
+    <td>${day.slice(8)}.${day.slice(5, 7)}</td>
+    <td><span class="badge dp">Ден</span></td>
+    <td><strong>${DP_LABEL[dp.profile] || dp.profile}</strong></td>
+    <td class="notes-cell"><span class="notes-text">${esc(dp.notes)}</span></td>
+    <td></td>
+  </tr>`;
+}
+
+function openDayProfile(day) {
+  document.getElementById('dp-date').value = day;
+  dpDirty = false;
+  loadDayPanel();
+  document.getElementById('dp-date').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function dpDay() {
+  const inp = document.getElementById('dp-date');
+  if (!inp.value) inp.value = nowLocalParts().date;
+  return inp.value;
+}
+function shiftDay(day, n) {
+  const d = new Date(day + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  const pad = x => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function sgn(v) { return v === null || v === undefined ? '—' : (v > 0 ? '+' + v : String(v)); }
+
+function renderDayResponse(r) {
+  const el = document.getElementById('dp-response');
+  if (!r.dose) { el.innerHTML = '<span class="dim">Няма бърз инсулин за този ден.</span>'; return; }
+  const when = new Date(r.dose.time).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' });
+  const pts = r.points.map(p => p.bg === null
+    ? `след ${p.after_min / 60}ч: <span class="dim">няма показание</span>`
+    : `след ${p.after_min / 60}ч: <strong>${p.bg}</strong> (Δ ${sgn(p.delta)}${p.delta_per_unit !== null ? `, ${sgn(p.delta_per_unit)} на U` : ''})`
+  ).join(' · ');
+  el.innerHTML =
+    `Първа бърза доза: <strong>${when}</strong> · <strong>${r.dose.units} U</strong>` +
+    (r.food_xe !== null ? ` · с храна ${r.food_xe} XE` : ' · без храна') +
+    `<br>BG при дозата: <strong>${r.bg_at_dose === null ? '—' : r.bg_at_dose}</strong> → ${pts}` +
+    `<br><span class="dim">${r.note}</span>`;
+}
+
+async function loadDayPanel() {
+  const day = dpDay();
+  try {
+    const [resp, profs] = await Promise.all([
+      api(`/day-response?date=${day}`),
+      api(`/day-profiles?from=${shiftDay(day, -13)}&to=${day}`),
+    ]);
+    renderDayResponse(resp);
+    const cur = profs.find(p => p.date === day);
+    document.querySelectorAll('.dp-btn[data-profile]').forEach(b =>
+      b.classList.toggle('active', !!cur && b.dataset.profile === cur.profile));
+    const notesEl = document.getElementById('dp-notes');
+    if (!dpDirty && document.activeElement !== notesEl) notesEl.value = cur ? cur.notes : '';
+    document.getElementById('dp-recent').innerHTML = profs.length
+      ? 'Последни дни: ' + profs.map(p => `${p.date.slice(8)}.${p.date.slice(5, 7)} ${DP_LABEL[p.profile] || p.profile}`).join(' · ')
+      : '';
+  } catch (e) { /* silent — panel is optional (also if the backend is not patched yet) */ }
+}
+
+async function setDayProfile(profile) {
+  const day = dpDay();
+  try {
+    await api(`/day-profiles/${day}`, {
+      method: 'PUT',
+      body: JSON.stringify({ profile, notes: document.getElementById('dp-notes').value.trim() })
+    });
+    dpDirty = false;
+    await loadDayPanel();
+    await loadDayProfiles();
+    renderHistory();
+    toast('Профилът е запазен');
+  } catch (e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+async function clearDayProfile() {
+  const day = dpDay();
+  try {
+    await api(`/day-profiles/${day}`, { method: 'DELETE' });
+  } catch (e) {
+    if (e.message === 'Unauthorized') return;
+    if (!e.message.startsWith('404')) { toast(e.message, true); return; }
+  }
+  dpDirty = false;
+  document.getElementById('dp-notes').value = '';
+  await loadDayPanel();
+  await loadDayProfiles();
+  renderHistory();
+}
+
+// ============= TIMEZONE (server-side day grouping) =============
+const TZ_FALLBACK = ['Europe/Sofia', 'Europe/Athens', 'Europe/Istanbul', 'Europe/London', 'Europe/Berlin', 'Europe/Bucharest',
+  'Europe/Belgrade', 'Europe/Moscow', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Asia/Dubai', 'UTC'];
+
+async function loadTimezone() {
+  const block = document.getElementById('tz-block');
+  try {
+    const t = await api('/timezone');
+    const zones = (typeof Intl.supportedValuesOf === 'function') ? Intl.supportedValuesOf('timeZone') : TZ_FALLBACK.slice();
+    if (!zones.includes(t.timezone)) zones.unshift(t.timezone);
+    if (!zones.includes('UTC')) zones.push('UTC');
+    const sel = document.getElementById('tz-select');
+    sel.innerHTML = zones.map(z => `<option value="${z}">${z}</option>`).join('');
+    sel.value = t.timezone;
+    const device = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.getElementById('tz-status').innerHTML =
+      `Сървър: <strong>${t.timezone}</strong>${t.timezone === t.default ? ' (по подразбиране)' : ` (по подразбиране ${t.default})`} · устройство: ${device}` +
+      (device !== t.timezone ? ' · <span style="color:var(--high)">различни зони: денят в отчетите и часовете на екрана може да не съвпадат</span>' : '');
+    block.style.display = '';
+  } catch (e) {
+    block.style.display = 'none';  // backend without the timezone patch
+  }
+}
+
+async function saveTimezone() {
+  try {
+    await api('/timezone', { method: 'PUT', body: JSON.stringify({ timezone: document.getElementById('tz-select').value }) });
+    toast('Часовата зона е запазена');
+    await loadTimezone();
+    reload();
+  } catch (e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+async function resetTimezone() {
+  try {
+    await api('/timezone', { method: 'DELETE' });
+    toast('Върната е зоната по подразбиране');
+    await loadTimezone();
+    reload();
+  } catch (e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+// ============= EXPORT / IMPORT =============
+async function syncCgm() {
+  if (syncing) return;
+  syncing = true;
+  const btn = document.getElementById('cgm-sync-btn');
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Обновяване...';
+  try {
+    const result = await api('/cgm-sync', { method: 'POST' });
+    toast(result.summary || 'CGM синхронизацията завърши');
+    await reload();
+  } catch(e) {
+    if (e.message !== 'Unauthorized') {
+      toast('Грешка при CGM синхронизация: ' + e.message, true);
+      await reload();  // телефонът може да е недостъпен, но записите в базата пак се обновяват
+    }
+  } finally {
+    syncing = false;
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+async function exportJSON() {
+  try {
+    const data = await api('/export');
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `diabet-log-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+async function exportCSV() {
+  let data;
+  try {
+    data = await api('/export'); // пълен dataset, не само текущо заредения диапазон
+  } catch(e) {
+    if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, true);
+    return;
+  }
+  const rows = [['type','time_utc','time_local','value','unit','notes']];
+  for (const type of ['bg','fast','slow','ketones','meal']) {
+    (data[type] || []).forEach(e => {
+      const unit = (type === 'bg' || type === 'ketones') ? 'mmol/L' : (type === 'meal' ? 'XE' : 'U');
+      const localTime = new Date(e.time).toLocaleString('bg-BG');
+      rows.push([type.toUpperCase(), e.time, localTime, e.value, unit, e.notes || '']);
+    });
+  }
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `diabet-log-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+async function importJSON(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      const replace = confirm('OK = ЗАМЕНИ всички данни\nCancel = добави към съществуващите');
+      const res = await api('/import', {
+        method: 'POST',
+        body: JSON.stringify({ ...imported, replace })
+      });
+      await reload();
+      toast(`Импортирани: ${res.imported}`);
+    } catch(err) { if (err.message !== 'Unauthorized') toast('Грешка: ' + err.message, true); }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+async function clearAll() {
+  if (!confirm('Изтрий ВСИЧКИ данни на сървъра? Необратимо.')) return;
+  if (!confirm('Наистина ли?')) return;
+  try {
+    await api('/entries', { method: 'DELETE' });
+    await reload();
+    toast('Изтрито');
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+// ============= UI WIRING =============
+document.getElementById('entry-type-select').addEventListener('change', (e) => {
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelector(`.tab-content[data-tab="${e.target.value}"]`).classList.add('active');
+});
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRange = btn.dataset.range === 'all' ? 'all' : parseInt(btn.dataset.range);
+    chartReset = true;
+    reload();  // обхватът вече определя какво се дърпа, не само какво се рисува
+  });
+});
+document.querySelectorAll('.cgm-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cgm-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    cgmMode = btn.dataset.cgm;
+    chartReset = true;
+    render();
+  });
+});
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
+
+// ============= INIT =============
+(async () => {
+  ['bg','fast','slow','ketones','activity','alcohol','device_change'].forEach(t => setNowInto(t));
+  await checkAuthMode();
+  if (authMode === 'login' && !getToken()) {
+    showLogin();
+  } else {
+    reload();
+    loadSettings();
+    loadTimezone();
+  }
+})();
+setInterval(() => {
+  if (document.getElementById('login').style.display !== 'none' || editingNotes) return;
+  if (AUTO_SYNC_CGM) syncCgm(); else reload();
+}, 60000);
+</script>
+</body>
+</html>

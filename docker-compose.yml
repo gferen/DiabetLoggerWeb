@@ -1,0 +1,30 @@
+services:
+  diabet-logger:
+    build: .
+    container_name: diabet-logger
+    restart: unless-stopped
+    ports:
+      - "8765:8000"
+    volumes:
+      - ./data:/data
+      - ./juggluco_watermark.json:/app/juggluco_watermark.json
+    environment:
+      # === AUTH (all optional) ===
+      # Browser login — set both to enable login screen:
+      - DIABET_USERNAME=${DIABET_USERNAME:-}
+      - DIABET_PASSWORD=${DIABET_PASSWORD:-}
+      # Script/API access:
+      - DIABET_API_KEY=${DIABET_API_KEY:-}
+      # Optional: pin JWT secret (else auto-generated in /data/.jwt_secret)
+      - DIABET_JWT_SECRET=${DIABET_JWT_SECRET:-}
+      # Optional: token lifetime, default 30 days
+      - DIABET_TOKEN_TTL_DAYS=${DIABET_TOKEN_TTL_DAYS:-30}
+      # === LOCALE ===
+      # Ползва се само за групиране по календарен ден (daily breakdown,
+      # active-day counts). Съхранението остава UTC.
+      - DIABET_TZ=${DIABET_TZ:-Europe/Sofia}
+      # === STORAGE ===
+      - DIABET_DB=/data/diabet.db
+      # === CGM SYNC (juggluco_pull.py) ===
+      # Internal port is 8000 (see ports mapping above: "8765:8000")
+      - DIABET_LOGGER_URL=http://127.0.0.1:8000/api/entries

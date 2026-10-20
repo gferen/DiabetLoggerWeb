@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Хранене · Diabet Logger</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #1a2029; --panel-2: #232b37;
+    --text: #e4e7eb; --muted: #8a94a3;
+    --accent: #4ade80; --danger: #ef4444;
+    --fast: #f59e0b; --slow: #3b82f6; --meal: #14b8a6;
+    --border: #2d3748;
+    --ok: #4ade80; --high: #f59e0b; --very-high: #dc2626;
+    --low: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 16px; max-width: 700px; margin-left: auto; margin-right: auto; }
+  h1 { margin: 0 0 16px 0; font-size: 22px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  h2 { font-size: 14px; margin: 0 0 12px 0; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 10px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  input, textarea, select { width: 100%; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 6px; font-size: 15px; font-family: inherit; }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  .btn { background: var(--accent); color: #0f1419; border: none; padding: 10px 18px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn:hover:not(:disabled) { opacity: 0.9; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.secondary { background: var(--panel-2); color: var(--text); border: 1px solid var(--border); }
+  .btn.danger { background: var(--danger); color: white; }
+  .btn.big { padding: 14px 24px; font-size: 16px; width: 100%; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+  .tab-bar { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tab { padding: 10px 18px; background: var(--panel-2); border: 1px solid var(--border); color: var(--muted); border-radius: 6px 6px 0 0; font-size: 14px; cursor: pointer; border-bottom: none; font-weight: 500; }
+  .tab.active { background: var(--panel); color: var(--text); font-weight: 700; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Custom datetime picker */
+  .dt-picker { display: flex; gap: 4px; align-items: center; }
+  .dt-picker input[type="date"] { flex: 1; min-width: 0; }
+  .dt-num { width: 60px; text-align: center; padding: 10px 4px; }
+  .dt-sep { color: var(--muted); font-weight: bold; padding: 0 2px; }
+
+  /* Calc result */
+  .calc-result { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 16px 0; }
+  .calc-result.blocked { border-color: var(--danger); background: rgba(239, 68, 68, 0.08); }
+  .dose-big { font-size: 36px; font-weight: 700; text-align: center; margin: 8px 0; color: var(--fast); }
+  .dose-big.blocked { color: var(--danger); font-size: 20px; }
+  .breakdown { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+
+  .alert { padding: 12px 14px; border-radius: 6px; margin: 10px 0; font-size: 13px; border-left: 4px solid; line-height: 1.5; }
+  .alert.danger { background: rgba(239, 68, 68, 0.1); border-color: var(--danger); color: #fca5a5; }
+  .alert.warn { background: rgba(245, 158, 11, 0.1); border-color: var(--high); color: #fcd34d; }
+  .alert.info { background: rgba(74, 222, 128, 0.08); border-color: var(--ok); color: #86efac; }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--border); padding: 10px 20px; border-radius: 6px; font-size: 13px; z-index: 1000; opacity: 0; transition: opacity 0.2s; }
+  .toast.show { opacity: 1; }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+  .toast.ok { border-color: var(--ok); color: var(--ok); }
+
+  .override-block { margin: 12px 0; padding: 10px 12px; background: var(--panel-2); border-radius: 6px; }
+  .override-block label { color: var(--text); font-size: 13px; }
+
+  .info-box { background: var(--panel-2); border-radius: 6px; padding: 10px 12px; margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  /* Login */
+  .login-overlay { position: fixed; inset: 0; background: var(--bg); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .login-box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 24px; width: 320px; max-width: 90vw; }
+  .login-box input { margin-bottom: 10px; }
+  .login-error { color: var(--danger); font-size: 12px; margin-top: 8px; min-height: 16px; }
+
+  /* Settings */
+  .settings-row { display: grid; grid-template-columns: 1fr 120px; gap: 10px; margin-bottom: 10px; align-items: center; }
+  .settings-row label { margin: 0; }
+  .corrections-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+  .corrections-table td, .corrections-table th { padding: 6px; text-align: left; }
+  .corrections-table input { padding: 4px 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div id="login" class="login-overlay">
+  <div class="login-box">
+    <h2>🩸 Diabet Logger</h2>
+    <label>Потребител</label>
+    <input type="text" id="login-user" autocomplete="username">
+    <label>Парола</label>
+    <input type="password" id="login-pass" autocomplete="current-password">
+    <button class="btn" style="width:100%" onclick="doLogin()">Вход</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<h1>🍽 Хранене
+  <a href="/" class="btn secondary" style="margin-left:auto;text-decoration:none;font-size:13px;padding:6px 12px">← Основно</a>
+</h1>
+
+<div class="tab-bar">
+  <div class="tab active" data-tab="meal">🍽 Хранене</div>
+  <div class="tab" data-tab="evening">🌙 Вечерна доза</div>
+  <div class="tab" data-tab="settings">⚙️ Настройки</div>
+</div>
+
+<!-- =============== MEAL TAB =============== -->
+<div class="tab-content active" data-tab="meal">
+  <div class="panel">
+    <h2>Данни за храненето</h2>
+    <div class="row">
+      <div>
+        <label>Дата и час</label>
+        <div class="dt-picker">
+          <input type="date" id="m-date">
+          <input type="number" id="m-hour" min="0" max="23" class="dt-num" placeholder="ч">
+          <span class="dt-sep">:</span>
+          <input type="number" id="m-min" min="0" max="59" class="dt-num" placeholder="м">
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>BG преди хранене (mmol/L)</label>
+        <input type="number" id="m-bg" step="0.1" min="1" max="30" placeholder="напр. 7.2" oninput="autoCalc()">
+      </div>
+      <div>
+        <label>XE (хлебни единици)</label>
+        <input type="number" id="m-xe" step="0.5" min="0" max="20" placeholder="напр. 3" oninput="autoCalc()">
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button type="button" class="btn secondary" style="font-size:11px;padding:4px 10px" onclick="fillBeerXE(0.33)">🍺 0.33л</button>
+          <button type="button" class="btn secondary" style="font-size:11px;padding:4px 10px" onclick="fillBeerXE(0.5)">🍺 0.5л</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <label>Описание на храната</label>
+      <input type="text" id="m-food" placeholder="напр. 2 филии хляб + сирене, чай">
+    </div>
+
+    <div id="calc-result" class="calc-result" style="display:none"></div>
+
+    <div class="override-block" id="override-block" style="display:none">
+      <label>
+        <input type="checkbox" id="m-override-chk" onchange="toggleOverride()"> Ръчна доза (override препоръката)
+      </label>
+      <div id="m-override-input-wrap" style="display:none;margin-top:8px">
+        <input type="number" id="m-override" step="0.5" min="0" max="50" placeholder="колко единици бърз да инжектираш">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn big" id="m-save-btn" onclick="saveMeal()" disabled>Запиши: BG + XE + бърз инсулин</button>
+    </div>
+
+    <div class="info-box">
+      Ще се създадат <strong>3 отделни записа</strong> с еднакво време: BG (mmol/L), XE (брой), Бърз инсулин (U). Може после да ги видиш и редактираш в главната страница.
+    </div>
+  </div>
+</div>
+
+<!-- =============== EVENING TAB =============== -->
+<div class="tab-content" data-tab="evening">
+  <div class="panel">
+    <h2>Вечерна бавна доза</h2>
+    <div class="row">
+      <div>
+        <label>Дата и час</label>
+        <div class="dt-picker">
+          <input type="date" id="e-date">
+          <input type="number" id="e-hour" min="0" max="23" class="dt-num" placeholder="ч">
+          <span class="dt-sep">:</span>
+          <input type="number" id="e-min" min="0" max="59" class="dt-num" placeholder="м">
+        </div>
+      </div>
+      <div>
+        <label>BG сега (mmol/L)</label>
+        <input type="number" id="e-bg" step="0.1" min="1" max="30" placeholder="напр. 6.5" oninput="autoCalcEvening()">
+      </div>
+    </div>
+
+    <div id="ev-result" class="calc-result" style="display:none"></div>
+
+    <div class="actions">
+      <button class="btn big" id="e-save-btn" onclick="saveEvening()" disabled>Запиши вечерна доза</button>
+    </div>
+
+    <div class="info-box" id="e-info-box"></div>
+  </div>
+</div>
+
+<!-- =============== SETTINGS TAB =============== -->
+<div class="tab-content" data-tab="settings">
+  <div class="panel">
+    <h2>Правила за изчисление на дозата</h2>
+    <div id="settings-body">
+      <div style="text-align:center;padding:20px;color:var(--muted)">Зареждане...</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const API = '/api';
+let settings = null;
+let calcData = null;
+let evData = null;
+let authMode = null;
+
+// ============= AUTH =============
+function getToken() { return localStorage.getItem('diabet_token') || ''; }
+function setToken(t) { localStorage.setItem('diabet_token', t); }
+function clearToken() { localStorage.removeItem('diabet_token'); }
+function getApiKey() { return localStorage.getItem('diabet_api_key') || ''; }
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}) };
+  const key = getApiKey();
+  const tok = getToken();
+  if (key) headers['X-API-Key'] = key;
+  if (tok) headers['Authorization'] = 'Bearer ' + tok;
+  const res = await fetch(API + path, { ...opts, headers });
+  if (res.status === 401) {
+    if (authMode === 'login') { clearToken(); showLogin(); }
+    throw new Error('Unauthorized');
+  }
+  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  return res.status === 204 ? null : res.json();
+}
+
+async function checkAuth() {
+  const r = await fetch(API + '/health');
+  const h = await r.json();
+  authMode = h.auth.login ? 'login' : h.auth.api_key ? 'apikey' : 'open';
+}
+
+function showLogin() {
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('login-user').focus();
+}
+function hideLogin() { document.getElementById('login').style.display = 'none'; }
+
+async function doLogin() {
+  const username = document.getElementById('login-user').value;
+  const password = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  try {
+    const res = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    setToken(d.token);
+    document.getElementById('login-pass').value = '';
+    hideLogin();
+    init();
+  } catch(e) { err.textContent = 'Грешен потребител или парола'; }
+}
+
+// ============= HELPERS =============
+function nowLocalParts() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return { date: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`, hour: d.getHours(), min: d.getMinutes() };
+}
+function setNowInto(prefix) {
+  const p = nowLocalParts();
+  document.getElementById(`${prefix}-date`).value = p.date;
+  document.getElementById(`${prefix}-hour`).value = p.hour;
+  document.getElementById(`${prefix}-min`).value = p.min;
+}
+function readDatetime(prefix) {
+  const date = document.getElementById(`${prefix}-date`).value;
+  const hourRaw = document.getElementById(`${prefix}-hour`).value;
+  const minRaw = document.getElementById(`${prefix}-min`).value;
+  if (!date || hourRaw === '' || minRaw === '') return null;
+  const hour = parseInt(hourRaw, 10);
+  const min = parseInt(minRaw, 10);
+  if (isNaN(hour) || isNaN(min) || hour<0||hour>23||min<0||min>59) return null;
+  const pad = n => String(n).padStart(2, '0');
+  return new Date(`${date}T${pad(hour)}:${pad(min)}:00`);
+}
+function toast(msg, level='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (level === 'error' ? 'error' : level === 'ok' ? 'ok' : '');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ============= TABS =============
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelector(`.tab-content[data-tab="${tab.dataset.tab}"]`).classList.add('active');
+    if (tab.dataset.tab === 'settings') renderSettings();
+  });
+});
+
+// ============= MEAL CALC =============
+function fillBeerXE(liters) {
+  const gramsPerXE = (settings && settings.xe_grams_carbs) ? settings.xe_grams_carbs : 12;
+  const carbsPer100ml = 4.5; // стандартна светла бира (лагер), приблизително
+  const totalCarbs = liters * 1000 / 100 * carbsPer100ml;
+  const xe = Math.round((totalCarbs / gramsPerXE) * 2) / 2; // закръгля до 0.5 (стъпката на полето)
+  document.getElementById('m-xe').value = xe;
+  const foodEl = document.getElementById('m-food');
+  if (!foodEl.value.trim()) foodEl.value = `бира ${liters}л`;
+  autoCalc();
+}
+
+async function autoCalc() {
+  const bg = parseFloat(document.getElementById('m-bg').value);
+  const xe = parseFloat(document.getElementById('m-xe').value);
+  const resultEl = document.getElementById('calc-result');
+  const overrideBlock = document.getElementById('override-block');
+  const saveBtn = document.getElementById('m-save-btn');
+
+  if (isNaN(bg) || isNaN(xe)) {
+    resultEl.style.display = 'none';
+    overrideBlock.style.display = 'none';
+    saveBtn.disabled = true;
+    return;
+  }
+
+  try {
+    const d = await api('/calc-dose', {
+      method: 'POST',
+      body: JSON.stringify({ bg, xe })
+    });
+    calcData = d;
+    resultEl.style.display = 'block';
+    overrideBlock.style.display = 'block';
+
+    if (d.blocked) {
+      resultEl.classList.add('blocked');
+      resultEl.innerHTML = `
+        <div class="dose-big blocked">🚫 Блокирано</div>
+        <div class="alert danger">${d.message}</div>
+        <div style="text-align:center;color:var(--muted);font-size:12px">Можеш да запишеш само BG + XE без инсулин.</div>
+      `;
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Запиши: BG + XE (без инсулин)';
+    } else {
+      resultEl.classList.remove('blocked');
+      const warnings = d.warnings.map(w => `<div class="alert ${w.level}">${w.message}</div>`).join('');
+      resultEl.innerHTML = `
+        <div style="text-align:center;color:var(--muted);font-size:12px;text-transform:uppercase">Препоръчана доза бърз инсулин</div>
+        <div class="dose-big">${d.recommended_units} U</div>
+        <div class="breakdown">${d.breakdown}</div>
+        ${warnings}
+      `;
+      saveBtn.disabled = false;
+      saveBtn.textContent = `Запиши: BG + XE + ${d.recommended_units} U бърз`;
+    }
+  } catch(e) {
+    if (e.message !== 'Unauthorized') toast(e.message, 'error');
+  }
+}
+
+function toggleOverride() {
+  const chk = document.getElementById('m-override-chk').checked;
+  document.getElementById('m-override-input-wrap').style.display = chk ? 'block' : 'none';
+  updateSaveBtnLabel();
+}
+
+function updateSaveBtnLabel() {
+  if (!calcData) return;
+  const saveBtn = document.getElementById('m-save-btn');
+  const useOverride = document.getElementById('m-override-chk').checked;
+  const overrideVal = parseFloat(document.getElementById('m-override').value);
+  if (calcData.blocked) {
+    saveBtn.textContent = 'Запиши: BG + XE (без инсулин)';
+  } else if (useOverride && !isNaN(overrideVal)) {
+    saveBtn.textContent = `Запиши: BG + XE + ${overrideVal} U бърз (override)`;
+  } else {
+    saveBtn.textContent = `Запиши: BG + XE + ${calcData.recommended_units} U бърз`;
+  }
+}
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'm-override') updateSaveBtnLabel();
+});
+
+async function saveMeal() {
+  if (!calcData) return;
+  const dt = readDatetime('m');
+  if (!dt) { toast('Невалидна дата/час', 'error'); return; }
+  const iso = dt.toISOString();
+  const bg = parseFloat(document.getElementById('m-bg').value);
+  const xe = parseFloat(document.getElementById('m-xe').value);
+  const food = document.getElementById('m-food').value.trim();
+  const useOverride = document.getElementById('m-override-chk').checked;
+  const overrideVal = parseFloat(document.getElementById('m-override').value);
+
+  let insulin = null;
+  if (!calcData.blocked) {
+    insulin = (useOverride && !isNaN(overrideVal)) ? overrideVal : calcData.recommended_units;
+  }
+
+  const saveBtn = document.getElementById('m-save-btn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Записване...';
+
+  try {
+    // BG entry
+    await api('/entries', {
+      method: 'POST',
+      body: JSON.stringify({ type:'bg', value:bg, time:iso, notes: food ? `преди: ${food}` : 'преди хранене' })
+    });
+    // Meal entry (XE)
+    await api('/entries', {
+      method: 'POST',
+      body: JSON.stringify({ type:'meal', value:xe, time:iso, notes: food })
+    });
+    // Fast insulin entry (if not blocked)
+    if (insulin !== null && insulin > 0) {
+      const insulinNotes = useOverride ? `override за ${xe} XE` : `за ${xe} XE (авто-калк)`;
+      await api('/entries', {
+        method: 'POST',
+        body: JSON.stringify({ type:'fast', value:insulin, time:iso, notes: insulinNotes })
+      });
+    }
+
+    // Reset form
+    document.getElementById('m-bg').value = '';
+    document.getElementById('m-xe').value = '';
+    document.getElementById('m-food').value = '';
+    document.getElementById('m-override-chk').checked = false;
+    document.getElementById('m-override').value = '';
+    document.getElementById('m-override-input-wrap').style.display = 'none';
+    document.getElementById('calc-result').style.display = 'none';
+    document.getElementById('override-block').style.display = 'none';
+    setNowInto('m');
+    calcData = null;
+    saveBtn.textContent = 'Запиши: BG + XE + бърз инсулин';
+
+    toast(`Записано: BG + XE${insulin ? ' + ' + insulin + ' U бърз' : ''}`, 'ok');
+  } catch(e) {
+    if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, 'error');
+    saveBtn.disabled = false;
+    updateSaveBtnLabel();
+  }
+}
+
+// ============= EVENING CALC =============
+async function autoCalcEvening() {
+  const bg = parseFloat(document.getElementById('e-bg').value);
+  const resultEl = document.getElementById('ev-result');
+  const saveBtn = document.getElementById('e-save-btn');
+  const infoBox = document.getElementById('e-info-box');
+
+  if (isNaN(bg)) {
+    resultEl.style.display = 'none';
+    saveBtn.disabled = true;
+    infoBox.innerHTML = '';
+    return;
+  }
+
+  try {
+    const d = await api(`/calc-evening?bg=${bg}`, { method: 'POST' });
+    evData = d;
+    resultEl.style.display = 'block';
+
+    if (d.blocked) {
+      resultEl.classList.add('blocked');
+      resultEl.innerHTML = `
+        <div class="dose-big blocked">🚫 Хипогликемия</div>
+        <div class="alert danger">${d.message}</div>
+      `;
+      saveBtn.disabled = true;
+      infoBox.innerHTML = '';
+    } else {
+      resultEl.classList.remove('blocked');
+      let snackHtml = '';
+      if (d.snack_recommended) {
+        snackHtml = `<div class="alert info">🍶 BG ${bg} mmol/L ≤ прага за снак. Препоръчано: <strong>${d.snack_desc}</strong> преди инжектиране.</div>`;
+      }
+      resultEl.innerHTML = `
+        <div style="text-align:center;color:var(--muted);font-size:12px;text-transform:uppercase">Вечерна бавна доза</div>
+        <div class="dose-big" style="color:var(--slow)">${d.slow_dose} U</div>
+        ${snackHtml}
+      `;
+      saveBtn.disabled = false;
+      saveBtn.textContent = `Запиши: BG${d.snack_recommended ? ' + снак' : ''} + ${d.slow_dose} U бавен`;
+      infoBox.innerHTML = 'Ще се създадат ' + (d.snack_recommended ? '3' : '2') + ' записа: BG, ' + (d.snack_recommended ? 'снак (в бележка), ' : '') + 'бавен инсулин.';
+    }
+  } catch(e) {
+    if (e.message !== 'Unauthorized') toast(e.message, 'error');
+  }
+}
+
+async function saveEvening() {
+  if (!evData || evData.blocked) return;
+  const dt = readDatetime('e');
+  if (!dt) { toast('Невалидна дата/час', 'error'); return; }
+  const iso = dt.toISOString();
+  const bg = parseFloat(document.getElementById('e-bg').value);
+
+  const saveBtn = document.getElementById('e-save-btn');
+  saveBtn.disabled = true;
+
+  try {
+    await api('/entries', {
+      method: 'POST',
+      body: JSON.stringify({ type:'bg', value:bg, time:iso, notes: 'преди вечерна доза' + (evData.snack_recommended ? ' (+ снак)' : '') })
+    });
+    await api('/entries', {
+      method: 'POST',
+      body: JSON.stringify({ type:'slow', value:evData.slow_dose, time:iso, notes: 'вечерна доза' + (evData.snack_recommended ? ' след ' + evData.snack_desc : '') })
+    });
+
+    document.getElementById('e-bg').value = '';
+    document.getElementById('ev-result').style.display = 'none';
+    setNowInto('e');
+    evData = null;
+    document.getElementById('e-info-box').innerHTML = '';
+    toast('Вечерна доза записана', 'ok');
+  } catch(e) {
+    if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, 'error');
+    saveBtn.disabled = false;
+  }
+}
+
+// ============= SETTINGS =============
+async function renderSettings() {
+  const body = document.getElementById('settings-body');
+  try {
+    settings = await api('/settings');
+    const corr = settings.corrections || [];
+    body.innerHTML = `
+      <div class="settings-row"><label>I:C ratio при <strong>нормална BG</strong> (≥ праг)</label><input type="number" step="0.1" min="0.5" max="10" id="s-ic-normal" value="${settings.ic_ratio_normal}"><span style="color:var(--muted);font-size:12px">U за 1 XE</span></div>
+      <div class="settings-row"><label>I:C ratio при <strong>ниска BG</strong> (< праг)</label><input type="number" step="0.1" min="0.5" max="10" id="s-ic-low" value="${settings.ic_ratio_low_bg}"><span style="color:var(--muted);font-size:12px">U за 1 XE</span></div>
+      <div class="settings-row"><label>Праг за "ниска BG"</label><input type="number" step="0.1" min="3" max="10" id="s-low-thresh" value="${settings.ic_low_bg_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
+
+      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;margin:16px 0 8px 0">Корекции при висока BG</h3>
+      <table class="corrections-table">
+        <thead><tr><th>От (вкл.)</th><th>До (изкл.)</th><th>+ U</th><th></th></tr></thead>
+        <tbody id="corr-body">
+          ${corr.map((r, i) => `
+            <tr>
+              <td><input type="number" step="0.1" min="3" max="30" value="${r.min_bg}" data-i="${i}" data-k="min_bg"></td>
+              <td><input type="number" step="0.1" min="3" max="999" value="${r.max_bg}" data-i="${i}" data-k="max_bg"></td>
+              <td><input type="number" step="0.5" min="0" max="20" value="${r.add_units}" data-i="${i}" data-k="add_units"></td>
+              <td><button class="btn small danger" style="padding:4px 8px;font-size:12px" onclick="removeCorr(${i})">×</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      <button class="btn secondary" style="font-size:12px;padding:4px 10px" onclick="addCorr()">+ ред</button>
+
+      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;margin:16px 0 8px 0">Безопасност</h3>
+      <div class="settings-row"><label>Хипо праг (блокира инсулин)</label><input type="number" step="0.1" min="2" max="8" id="s-hypo" value="${settings.hypo_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
+      <div class="settings-row"><label>Праг за проверка на кетоните</label><input type="number" step="0.5" min="10" max="25" id="s-ket" value="${settings.ketones_check_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
+      <div class="settings-row"><label>Insulin stacking prompt (часове)</label><input type="number" step="0.5" min="0.5" max="8" id="s-stack" value="${settings.insulin_stacking_hours}"><span style="color:var(--muted);font-size:12px">часа</span></div>
+
+      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;margin:16px 0 8px 0">Вечерна доза</h3>
+      <div class="settings-row"><label>Праг за препоръка снак</label><input type="number" step="0.1" min="3" max="15" id="s-ev-thresh" value="${settings.evening_snack_bg_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
+      <div class="settings-row"><label>Описание на снака</label><input type="text" maxlength="200" id="s-ev-desc" value="${escapeHtml(settings.evening_snack_desc)}"><span></span></div>
+      <div class="settings-row"><label>Вечерна доза бавен инсулин</label><input type="number" step="0.5" min="0" max="100" id="s-ev-dose" value="${settings.evening_slow_dose}"><span style="color:var(--muted);font-size:12px">U</span></div>
+
+      <div class="actions">
+        <button class="btn" onclick="saveSettings()">Запази</button>
+        <button class="btn secondary" onclick="resetSettings()">Върни към default</button>
+      </div>
+
+      <div class="info-box">
+        Промените засягат само изчисляването на препоръчани дози. Не променят вече записани данни. Може да ги коригираш винаги.
+      </div>
+    `;
+  } catch(e) {
+    if (e.message !== 'Unauthorized') body.innerHTML = `<div class="alert danger">${e.message}</div>`;
+  }
+}
+
+function addCorr() {
+  const corr = settings.corrections || [];
+  const last = corr[corr.length - 1];
+  const newRow = last
+    ? { min_bg: last.max_bg, max_bg: last.max_bg + 3, add_units: last.add_units + 1 }
+    : { min_bg: 10, max_bg: 13, add_units: 1 };
+  settings.corrections = [...corr, newRow];
+  renderSettings();
+}
+function removeCorr(i) {
+  settings.corrections.splice(i, 1);
+  renderSettings();
+}
+
+async function saveSettings() {
+  // Read all inputs into settings object
+  const payload = {
+    ic_ratio_normal: parseFloat(document.getElementById('s-ic-normal').value),
+    ic_ratio_low_bg: parseFloat(document.getElementById('s-ic-low').value),
+    ic_low_bg_threshold: parseFloat(document.getElementById('s-low-thresh').value),
+    hypo_threshold: parseFloat(document.getElementById('s-hypo').value),
+    ketones_check_threshold: parseFloat(document.getElementById('s-ket').value),
+    insulin_stacking_hours: parseFloat(document.getElementById('s-stack').value),
+    evening_snack_bg_threshold: parseFloat(document.getElementById('s-ev-thresh').value),
+    evening_snack_desc: document.getElementById('s-ev-desc').value,
+    evening_slow_dose: parseFloat(document.getElementById('s-ev-dose').value),
+  };
+  // Read corrections from table
+  const corr = [];
+  document.querySelectorAll('#corr-body tr').forEach(row => {
+    const inputs = row.querySelectorAll('input');
+    corr.push({
+      min_bg: parseFloat(inputs[0].value),
+      max_bg: parseFloat(inputs[1].value),
+      add_units: parseFloat(inputs[2].value),
+    });
+  });
+  payload.corrections = corr;
+
+  try {
+    settings = await api('/settings', { method: 'PUT', body: JSON.stringify(payload) });
+    toast('Настройките са запазени', 'ok');
+  } catch(e) {
+    if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, 'error');
+  }
+}
+
+async function resetSettings() {
+  if (!confirm('Върнеш ли към default стойностите?')) return;
+  try {
+    settings = await api('/settings/reset', { method: 'POST' });
+    renderSettings();
+    toast('Върнато към default', 'ok');
+  } catch(e) {
+    if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, 'error');
+  }
+}
+
+// ============= INIT =============
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function init() {
+  setNowInto('m');
+  setNowInto('e');
+  try {
+    settings = await api('/settings');
+  } catch(e) { /* silent, login flow will kick in */ }
+}
+
+(async () => {
+  await checkAuth();
+  if (authMode === 'login' && !getToken()) {
+    showLogin();
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

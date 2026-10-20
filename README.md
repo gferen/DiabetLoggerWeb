@@ -1,107 +1,209 @@
 # Diabet Logger
 
-Self-hosted проследяване на кръвна захар, инсулин, кетони и структурирани данни за диабет (Тип 1). FastAPI + SQLite + Chart.js, без external зависимости от cloud услуги.
+Self-hosted тракер за захар, инсулин, хранене и CGM, с калкулатор на дозите и отчети за лекар и диетолог.
+FastAPI + SQLite + Chart.js, един контейнер.
 
-![status](https://img.shields.io/badge/status-active-brightgreen)
-![python](https://img.shields.io/badge/python-3.12-blue)
-![license](https://img.shields.io/badge/license-private-lightgrey)
+> Калкулаторите дават **предложение**, не медицински съвет. Дозата винаги я потвърждава човекът, който инжектира.
 
----
+## Какво може
 
-## Какво прави
-
-- **Логване:** BG (mmol/L), Бърз/Бавен инсулин (U), Кетони (mmol/L), Хранене (XE калкулатор)
-- **Структурирани данни:** физическа активност, алкохол, смяна на устройство (ампула/сензор) — с отделен timestamp за начало на хранене vs. момент на инжектиране
-- **CGM автоматична синхронизация** от Juggluco (Libre) — cron на 24ч или ръчен бутон
-- **Клинични метрики:** Time-in-Range %, GMI, средна BG, SD, CV%
-- **Интерактивна графика** с time-range филтри и zoom/pan
-- **Настройваем XE коефициент** (грамове въглехидрати на хлебна единица)
-- **Login** (JWT) или API Key auth — опционално
-- **Export/Import** JSON и CSV
-- **Multi-device sync** — една база, auto-refresh
-
-## Технологии
-
-| Слой | Технология |
-|---|---|
-| Backend | FastAPI, SQLite, PyJWT |
-| Frontend | Vanilla JS, Chart.js, без build стъпка |
-| CGM интеграция | Juggluco webserver API (Libre sensors) |
-| Deploy | Docker Compose |
+- **Записи:** BG (mmol/L), бърз и бавен инсулин (U), кетони (mmol/L), хранене (XE), активност (мин), алкохол (ед.), смяна на устройство (ампула/сензор)
+- **CGM:** показанията от Juggluco се дърпат от телефона (`juggluco_pull.py`) и се записват като обикновени `bg` записи с бележка `[CGM]`
+- **Time-in-Range** (Battelino et al. 2019), **GMI** (Bergenstal 2018), средна BG, SD, CV%
+- **График** със zoom и преместване по времето. CGM е тънка линия, ръчните измервания са точки. Филтри по период и по източник (BG + CGM / ръчни / само CGM)
+- **История** с редакция на бележките на място (стойността и часът не се променят, това е умишлено: audit trail)
+- **Хранене (`/meal`):** калкулатор на доза по XE и текуща BG, вечерна доза, настройки на правилата
+- **Дневен профил:** етикет за деня (Бърз / Нормален / Бавен) и бележка, само за справка
+- **Отчети:** `/report` за лекар, `/print-review` за диетолог (A4 за печат)
+- **Часова зона:** избира се от падащо меню в Настройки (виж "Часова зона")
+- **Login** (потребител и парола, JWT 30 дни) и/или **API key**, и двете по желание
+- **Автообновяване на 60 сек** (спира, докато редактираш бележка) и бутон „⟳ Обнови", който дърпа новите CGM показания
+- **Export / Import** JSON и CSV
 
 ## Quick start
 
 ```bash
-git clone <repo>
 cd diabet-logger
 docker compose up -d --build
 ```
 
-Отвори `http://<server>:8765/`. Без auth по подразбиране (препоръчва се зад WireGuard/VPN).
+Отвори `http://<server>:8765/`. Без auth по подразбиране (допустимо зад WireGuard / LAN).
 
-## Auth (опционално)
+**Важно при промени:** `static/` не е bind mount, а се пакетира в образа. След промяна на `.html` или `.py` трябва `docker compose up -d --build`. Базата (`data/`) е bind mount и се запазва.
 
-```bash
-# .env
-DIABET_USERNAME=потребител
-DIABET_PASSWORD=силна-парола
-DIABET_API_KEY=random-string-за-скриптове
-DIABET_TZ=Europe/Sofia
+## Конфигурация (`.env`)
+
+| Променлива | По подразбиране | За какво |
+|---|---|---|
+| `DIABET_USERNAME`, `DIABET_PASSWORD` | – | Вход от браузър (JWT) |
+| `DIABET_API_KEY` | – | `X-API-Key` за скриптове |
+| `DIABET_JWT_SECRET` | авто в `data/.jwt_secret` | Ключ за JWT; рестартът не обезсилва токените, ако `data/` се пази |
+| `DIABET_TOKEN_TTL_DAYS` | `30` | Валидност на токена |
+| `DIABET_TZ` | `Europe/Sofia` | Зона по подразбиране за дневните статистики и отчети. Може да се смени от Настройки (виж "Часова зона"); времената се пазят в UTC |
+| `DIABET_DB`, `DIABET_SECRET_FILE` | `/data/...` | Пътища вътре в контейнера |
+
+`.env` е с права `600` и никога не влиза в git. Без нито една auth променлива приложението е отворено.
+
+## Файлове
+
+```
+app.py                 FastAPI backend
+juggluco_pull.py       дърпа CGM от Juggluco на телефона (през WireGuard)
+juggluco_watermark.json докъде е стигнал последният pull
+dedupe.py              намира и чисти дублирани записи, по подразбиране само отчет (виж "Дубликати")
+qa.py                  QA тестове: python3 qa.py
+static/                index.html, meal.html, report.html, print-review.html
+data/diabet.db         SQLite (bind mount)
 ```
 
-## CGM синхронизация (Juggluco)
+## Модел на данните
 
-`juggluco_pull.py` тегли данни от Juggluco's вграден webserver (path-based `api_secret` auth) и ги записва през `/api/entries`. Изисква мрежов достъп до телефона (WireGuard препоръчително). Виж коментарите в скрипта за пълна конфигурация.
+Една таблица `entries` плюс помощни таблици.
 
-```bash
-python3 juggluco_pull.py            # incremental
-python3 juggluco_pull.py --full     # пълен backfill от активиране на сензора
-```
+| Колона | |
+|---|---|
+| `type` | `bg`, `fast`, `slow`, `ketones`, `meal`, `activity`, `alcohol`, `device_change` |
+| `value` | BG/кетони mmol/L, инсулин U, хранене XE, активност мин, алкохол ед. (`device_change` = 0) |
+| `time` | ISO 8601, в UTC |
+| `notes` | свободен текст (единственото, което се редактира) |
+| `meal_time`, `carbs_g`, `meta` | по желание: начало на храненето, грамове въглехидрати, JSON с допълнения (напр. интензитет на активност, тип устройство) |
 
-## API документация
+- **`UNIQUE(type, time)`:** два записа от един тип със същото време не могат да съществуват. Повторен POST връща съществуващия запис с `"duplicate": true`, а importът пропуска дублираните. Следствие: два ръчни BG в една и съща минута се слепват в един.
+- **`settings`:** key-value. Ред `rules` са правилата на калкулатора (JSON), ред `timezone` е избраната часова зона.
+- **`day_profiles`:** `date` (локален ден), `profile` (`fast`/`normal`/`slow`), `notes`. Не влиза в `/api/export`.
 
-Пълен Swagger UI на `/docs`. Основни endpoints:
+## API
+
+Всичко е под `/api`. Auth (ако е конфигуриран): `X-API-Key: ...` или `Authorization: Bearer <jwt>`. Swagger: `http://<server>:8765/docs`.
 
 | Method | Path | Описание |
 |---|---|---|
-| GET | `/api/entries` | записи, филтруеми по `type`/`from`/`to`/`limit` |
-| POST | `/api/entries` | нов запис (структурирани полета: `meal_time`, `carbs_g`, `meta`) |
-| POST | `/api/cgm-sync` | ръчна CGM синхронизация |
-| GET | `/api/stats` | TIR/GMI/mean/SD/CV |
-| GET/PUT | `/api/settings` | XE коефициент и др. |
-| GET | `/api/export` | пълен JSON dump |
-| POST | `/api/import` | merge/replace import |
+| GET | `/api/health` | здраве, кои auth методи са включени, часова зона |
+| POST | `/api/login` | `{username,password}` → `{token,expires_at}` |
+| GET | `/api/entries` | `?type=&from=&to=&limit=` (по подразбиране limit 20000) |
+| POST | `/api/entries` | `{type,value,time,notes,meal_time?,carbs_g?,meta?}` |
+| PATCH | `/api/entries/{id}` | `{notes}`, само бележките |
+| DELETE | `/api/entries/{id}` | изтрива един запис |
+| DELETE | `/api/entries` | изтрива ВСИЧКИ |
+| POST | `/api/cgm-sync` | пуска `juggluco_pull.py`; връща последния ред от изхода. Таймаут 120 сек (504 ако телефонът е недостъпен) |
+| GET | `/api/stats?days=14` | TIR, GMI, средна, SD, CV, инсулин на ден |
+| GET | `/api/report?from=&to=` | пълен отчет за лекар |
+| GET | `/api/export` | JSON, групиран по тип |
+| POST | `/api/import` | `{bg:[],fast:[],...,replace:bool}`, сливане с пропускане на дубликати |
+| GET / PUT | `/api/settings` | правилата на калкулатора (PUT е частичен) |
+| POST | `/api/settings/reset` | връща правилата по подразбиране |
+| POST | `/api/calc-dose` | `{bg,xe}` → препоръчана доза, разбивка, предупреждения |
+| POST | `/api/calc-evening?bg=` | вечерна бавна доза и препоръка за закуска |
+| GET / PUT / DELETE | `/api/timezone` | четене / избор `{timezone}` (IANA име, напр. `Europe/Sofia`) / връщане към `DIABET_TZ` |
+| GET | `/api/day-profiles` | `?from=&to=` (дати `YYYY-MM-DD`) |
+| PUT / DELETE | `/api/day-profiles/{date}` | `{profile,notes}` / изтриване |
+| GET | `/api/day-response?date=` | числа за първата бърза доза за деня: BG при дозата и след 2 и 3 ч |
+
+Страници: `/` (главна), `/meal`, `/report`, `/print-review`.
+
+## Калкулатор на дозите
+
+Правилата живеят в таблицата `settings` и се редактират от `/meal` → Настройки (грамовете въглехидрати на 1 XE и от главната страница). **Стойностите по-долу са defaults в кода. Живите може да са различни, провери в Настройки.**
+
+```
+доза = XE × I:C + корекция
+```
+
+| Правило | Default |
+|---|---|
+| I:C при BG ≥ 5 / при BG < 5 | 3.0 / 2.0 U за 1 XE |
+| Корекция при BG 10–13 / 13–16 / 16+ | +1 / +2 / +2 U |
+| BG < 4 | блокира инсулина (хипо) |
+| BG ≥ 15 | предупреждение: измери кетони |
+| бърз инсулин преди < 2 ч | предупреждение за stacking |
+| вечерен снак при BG ≤ | 6.0 (по подразбиране „до 200g кисело мляко") |
+| вечерна бавна доза | 15 U (фиксирана) |
+| 1 XE = | 12 g (в Настройки може да е друго, напр. 15 g) |
+
+`/meal` записва храненето като 3 записа с един и същ час: BG, хранене и бърз инсулин.
+
+## Дневен профил
+
+Етикет за деня и бележка, видими в панела „Дневен профил" и като ред в „История". Панелът показва и числа за първата бърза доза за деня (BG при дозата, след ~2 ч и ~3 ч, промяната и промяната на единица; без храна в същото време това е чист корекционен ефект).
+
+**Само за справка:** профилът не се чете от `calc-dose` и `calc-evening`, не променя дози и не влиза в export и отчети. Денят за `day-response` се смята по избраната часова зона.
+
+## Часова зона
+
+Всички времена се пазят в UTC. Часовата зона определя само **къде свършва денят** за дневните статистики, отчетите, броенето на активните дни и дневния профил. Избира се от падащото меню в Настройки, а ако нищо не е избрано, важи `DIABET_TZ` (по подразбиране `Europe/Sofia`). Смяната не пренаписва данни и важи веднага.
+
+Часовете, които виждаш и въвеждаш в браузъра, следват часовата зона на самото устройство. Когато зоната на сървъра и на устройството са различни, под менюто има предупреждение: денят в отчетите и часовете на екрана може да не съвпадат.
 
 ## Референтни диапазони
 
-**BG (mmol/L):** `<3.0` много ниско · `3.0-3.8` ниско · `3.9-10.0` в норма · `10.1-13.9` високо · `>13.9` много високо
+**BG (mmol/L):** `<3.0` много ниска · `3.0–3.8` ниска · `3.9–10.0` в диапазон · `10.1–13.9` висока · `>13.9` много висока
 
-**Кетони (β-хидроксибутират, mmol/L):** `<0.6` нормални · `0.6-1.5` повишени · `1.5-3.0` риск от DKA · `>3.0` спешно
+**Кетони (кръвни, β-хидроксибутират, mmol/L):**
+- `<0.6` нормални
+- `0.6–1.5` повишени: проверка на BG, хидратация
+- `1.5–3.0` риск от DKA: контакт с лекар
+- `>3.0` спешно
 
-**TIR цели (T1D):** in-range >70%, <3.0 mmol/L <1%, CV <36%
+**TIR цели (T1D):** в диапазон >70%, <3.0 mmol/L под 1%, обща хипо под 4%, CV <36%.
 
-⚠️ Не е медицинско устройство. GMI е оценка, не заменя лабораторно HbA1c.
+**GMI** е оценка по средната BG и не заменя лабораторно HbA1c. Валиден при 14+ дни редовни измервания. Със CGM всяко показание се брои като измерване, така че TIR и честотата на хипо вече са върху плътен поток от данни.
+
+## CGM
+
+- `POST /api/cgm-sync` (бутонът „⟳ Обнови") пуска `juggluco_pull.py`, който дърпа новите показания от телефона през WireGuard и ги записва с бележка `[CGM]`. Прогресът се пази в `juggluco_watermark.json`, така че всеки pull е инкрементален.
+- Автообновяването на страницата само презарежда от базата. Ако искаш то да дърпа и от телефона, в `index.html` има константа `AUTO_SYNC_CGM` (по подразбиране `false`).
+- Повторно изпратено показание не се дублира заради `UNIQUE(type, time)`.
+
+## Дубликати
+
+Дубликат = два или повече записа с еднакви `(type, time)`. Възниква при изгубен `juggluco_watermark.json` или при повторен `juggluco_pull.py --full` и тихо изкривява TIR, средната и GMI.
+
+При старт приложението се опитва да създаде `UNIQUE(type, time)`. Ако в базата вече има дубликати, индексът не се създава и в логовете има `[warn] UNIQUE(type,time) index NOT created`. Тогава:
+
+```bash
+cp data/diabet.db data/diabet.db.bak                  # backup първо
+DIABET_DB=data/diabet.db python3 dedupe.py            # само отчет, нищо не променя (dry run)
+DIABET_DB=data/diabet.db python3 dedupe.py --apply    # изтрива, пази записа с най-малък id, после създава индекса
+docker compose restart
+```
+
+`DIABET_DB` по подразбиране сочи `/data/diabet.db` (пътят вътре в контейнера), затова от хоста се задава явно. Скриптът показва групите, в които дублираните записи имат **различни стойности**: това не са CGM resend-и и трябва да се прегледат на ръка, преди `--apply`.
 
 ## Backup
 
 ```bash
+# ръчно
 cp data/diabet.db backup/diabet-$(date +%F).db
-# препоръчан cron: всеки ден в 03:00
+
+# cron 03:00 всеки ден
+0 3 * * * cp /path/diabet-logger/data/diabet.db /backup/diabet-$(date +\%F).db
 ```
 
-## Migration/дедупликация
+## nginx reverse proxy
 
-```bash
-python3 dedupe.py          # dry-run отчет
-python3 dedupe.py --apply  # изтрива потвърдени дубликати, създава UNIQUE индекс
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name diabet.ferencak.net;
+    ssl_certificate     /etc/letsencrypt/live/diabet.ferencak.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/diabet.ferencak.net/privkey.pem;
+
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8765;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
-## Тестове
+## Sync между устройства
 
-```bash
-python3 qa.py   # 150+ теста: калкулации, auth, миграция, structured data round-trip
-```
+Един URL, една база. Страницата се обновява на 60 сек. Login токенът важи 30 дни, per-device.
 
-## Лиценз
+## Миграции
 
-Личен проект, не за публична дистрибуция без съгласие.
+Автоматични при старт: премахване на стария `CHECK` (v2 → v3), добавяне на колоните `meal_time`, `carbs_g`, `meta`, таблиците `settings` и `day_profiles`. Данните се запазват.

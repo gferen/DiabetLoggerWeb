@@ -1,0 +1,16 @@
+# secrets and data
+.env
+data/
+*.db
+*.bak*
+# local files
+__pycache__/
+*.pyc
+.idea/
+*.zip
+zadeploy/
+juggluco_watermark.json
+dosing-scheme.docx
+*.html-[0-9]
+juggluco_pull.py
+static/cgm_view.html

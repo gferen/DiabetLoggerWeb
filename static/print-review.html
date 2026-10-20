@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>За диетолог · Diabet Logger</title>
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f8fafc; --panel-2: #eef2f7;
+    --text: #1a202c; --muted: #64748b;
+    --accent: #059669; --danger: #dc2626;
+    --fast: #d97706; --slow: #2563eb; --meal: #0d9488; --ketones: #7e22ce;
+    --border: #cbd5e1;
+    --low: #dc2626; --very-low: #991b1b;
+    --ok: #059669; --high: #d97706; --very-high: #7f1d1d;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 16px; max-width: 1400px; margin-left: auto; margin-right: auto; line-height: 1.4; }
+  h1 { margin: 0 0 6px 0; font-size: 22px; font-weight: 700; }
+  h2 { font-size: 13px; margin: 0 0 8px 0; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; border-bottom: 2px solid var(--border); padding-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; margin-bottom: 16px; padding: 12px; background: var(--panel-2); border-radius: 8px; }
+  .controls label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; }
+  .controls input[type="date"], .controls input[type="text"] { padding: 6px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 13px; background: white; }
+  .btn { background: var(--accent); color: white; border: none; padding: 7px 14px; border-radius: 5px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .btn:hover { opacity: 0.9; }
+  .btn.secondary { background: white; color: var(--text); border: 1px solid var(--border); }
+  .btn.secondary.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .presets { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 8px; }
+  .presets .btn { padding: 5px 10px; font-size: 12px; }
+
+  .summary { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+  .summary-cell { background: white; border: 1px solid var(--border); border-radius: 5px; padding: 8px 10px; }
+  .summary-cell .label { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+  .summary-cell .value { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .summary-cell .unit { font-size: 10px; color: var(--muted); font-weight: 400; margin-left: 2px; }
+
+  .schema { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 12px; }
+  .schema strong { color: var(--text); }
+  .schema table { border-collapse: collapse; margin-top: 6px; font-size: 11px; }
+  .schema th, .schema td { padding: 3px 8px; border: 1px solid var(--border); text-align: center; }
+  .schema th { background: var(--panel-2); }
+
+  /* Main table */
+  .day-block { margin-bottom: 12px; page-break-inside: avoid; }
+  .day-header { background: var(--panel-2); padding: 6px 10px; font-weight: 700; font-size: 13px; border-radius: 4px 4px 0 0; border: 1px solid var(--border); border-bottom: none; }
+  .day-header .day-name { color: var(--muted); font-weight: 400; margin-left: 8px; font-size: 12px; }
+  .day-header .day-stats { float: right; font-weight: 400; font-size: 12px; color: var(--muted); }
+  table.events { width: 100%; border-collapse: collapse; font-size: 12px; }
+  table.events th { background: var(--panel-2); padding: 4px 6px; font-size: 10px; text-transform: uppercase; color: var(--muted); border: 1px solid var(--border); font-weight: 600; text-align: left; }
+  table.events td { padding: 5px 6px; border: 1px solid var(--border); vertical-align: top; }
+  table.events tr.empty-row td { height: 30px; background: repeating-linear-gradient(45deg, transparent, transparent 5px, #f9fafb 5px, #f9fafb 10px); }
+  table.events tr.empty-row td.dietitian-cell { background: white; }
+
+  .col-time { width: 45px; }
+  .col-icon { width: 24px; text-align: center; }
+  .col-bg { width: 60px; text-align: right; }
+  .col-xe { width: 45px; text-align: right; }
+  .col-food { min-width: 140px; }
+  .col-fast { width: 55px; text-align: right; }
+  .col-slow { width: 55px; text-align: right; }
+  .col-ket { width: 55px; text-align: right; }
+  .col-dietitian { min-width: 220px; }
+
+  .dietitian-cell { background: white; }
+
+  /* Colored BG badges */
+  .bg-num { display: inline-block; padding: 1px 5px; border-radius: 3px; font-weight: 700; font-size: 11px; }
+  .bg-num.very-low { background: var(--very-low); color: white; }
+  .bg-num.low { background: var(--low); color: white; }
+  .bg-num.ok { background: var(--ok); color: white; }
+  .bg-num.high { background: var(--high); color: white; }
+  .bg-num.very-high { background: var(--very-high); color: white; }
+
+  .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+  .signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 24px; font-size: 12px; }
+  .sig-block { border-top: 1px solid var(--text); padding-top: 4px; }
+  .sig-block .label { color: var(--muted); font-size: 11px; }
+
+  .loading { text-align: center; padding: 40px; color: var(--muted); }
+  .empty { text-align: center; padding: 20px; color: var(--muted); font-style: italic; }
+
+  /* Login */
+  .login-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.98); display: none; align-items: center; justify-content: center; z-index: 100; }
+  .login-box { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 24px; width: 320px; max-width: 90vw; box-shadow: 0 10px 40px rgba(0,0,0,0.1); }
+  .login-box h2 { border: none; padding: 0; }
+  .login-box input { width: 100%; margin-bottom: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 5px; font-family: inherit; font-size: 14px; }
+  .login-error { color: var(--danger); font-size: 12px; margin-top: 8px; min-height: 16px; }
+
+  /* PRINT */
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    body { padding: 0; max-width: none; }
+    .no-print { display: none !important; }
+    .day-block { break-inside: avoid; }
+    .summary, .schema { break-inside: avoid; }
+    table.events { font-size: 10px; }
+    table.events td, table.events th { padding: 3px 4px; }
+    .col-dietitian { min-width: 180px; }
+    /* dashed pattern for empty rows to guide handwriting */
+    table.events tr.empty-row td { background: repeating-linear-gradient(45deg, transparent, transparent 4px, #f0f0f0 4px, #f0f0f0 8px); }
+    table.events tr.empty-row td.dietitian-cell { background: white; }
+  }
+</style>
+</head>
+<body>
+
+<div id="login" class="login-overlay">
+  <div class="login-box">
+    <h2>🩸 Diabet Logger</h2>
+    <label>Потребител</label>
+    <input type="text" id="login-user" autocomplete="username">
+    <label>Парола</label>
+    <input type="password" id="login-pass" autocomplete="current-password">
+    <button class="btn" style="width:100%" onclick="doLogin()">Вход</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<h1>🩺 Преглед за диетолог</h1>
+<div class="subtitle" id="subtitle">Период: —</div>
+
+<div class="controls no-print">
+  <div>
+    <label>От дата</label>
+    <input type="date" id="from-date">
+  </div>
+  <div>
+    <label>До дата</label>
+    <input type="date" id="to-date">
+  </div>
+  <div>
+    <label>Име (опц.)</label>
+    <input type="text" id="patient-name" placeholder="за принт" maxlength="80" oninput="onNameChange()">
+  </div>
+  <button class="btn" onclick="loadData()">Обнови</button>
+  <button class="btn secondary" onclick="window.print()">🖨 Печат / PDF</button>
+  <button class="btn secondary" onclick="window.location.href='/'">← Назад</button>
+  <div style="flex-basis: 100%">
+    <div class="presets">
+      <button class="btn secondary" data-preset="3">Последни 3 дни</button>
+      <button class="btn secondary active" data-preset="5">Последни 5 дни</button>
+      <button class="btn secondary" data-preset="7">Последна седмица</button>
+      <button class="btn secondary" data-preset="14">Последни 2 седмици</button>
+      <button class="btn secondary" data-preset="30">Последен месец</button>
+    </div>
+  </div>
+</div>
+
+<div id="content" class="loading">Зареждане...</div>
+
+<script>
+const API = '/api';
+let authMode = null;
+
+// ============= AUTH =============
+function getToken() { return localStorage.getItem('diabet_token') || ''; }
+function setToken(t) { localStorage.setItem('diabet_token', t); }
+function clearToken() { localStorage.removeItem('diabet_token'); }
+function getApiKey() { return localStorage.getItem('diabet_api_key') || ''; }
+
+async function checkAuth() {
+  const r = await fetch(API + '/health');
+  const h = await r.json();
+  authMode = h.auth.login ? 'login' : h.auth.api_key ? 'apikey' : 'open';
+}
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}) };
+  const key = getApiKey();
+  const tok = getToken();
+  if (key) headers['X-API-Key'] = key;
+  if (tok) headers['Authorization'] = 'Bearer ' + tok;
+  const res = await fetch(API + path, { ...opts, headers });
+  if (res.status === 401) {
+    if (authMode === 'login') { clearToken(); showLogin(); }
+    throw new Error('Unauthorized');
+  }
+  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+function showLogin() {
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('login-user').focus();
+}
+function hideLogin() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('login-error').textContent = '';
+}
+async function doLogin() {
+  const username = document.getElementById('login-user').value;
+  const password = document.getElementById('login-pass').value;
+  const err = document.getElementById('login-error');
+  err.textContent = '';
+  try {
+    const res = await fetch(API + '/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    setToken(d.token);
+    document.getElementById('login-pass').value = '';
+    hideLogin();
+    loadData();
+  } catch(e) { err.textContent = 'Грешен потребител или парола'; }
+}
+
+// ============= HELPERS =============
+function isoDate(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+function fmtDayName(iso) {
+  return new Date(iso).toLocaleDateString('bg-BG', { weekday: 'long' });
+}
+function fmtTime(iso) {
+  return new Date(iso).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+function bgClass(v) {
+  if (v < 3.0) return 'very-low';
+  if (v < 3.9) return 'low';
+  if (v > 13.9) return 'very-high';
+  if (v > 10.0) return 'high';
+  return 'ok';
+}
+function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ============= PRESETS =============
+function applyPreset(days) {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - parseInt(days) + 1);
+  document.getElementById('from-date').value = isoDate(from);
+  document.getElementById('to-date').value = isoDate(to);
+  document.querySelectorAll('.presets .btn').forEach(b => b.classList.remove('active'));
+  const active = document.querySelector(`.presets .btn[data-preset="${days}"]`);
+  if (active) active.classList.add('active');
+  loadData();
+}
+
+// ============= PATIENT NAME (persist locally) =============
+function onNameChange() {
+  const name = document.getElementById('patient-name').value.trim();
+  if (name) localStorage.setItem('diabet_patient_name', name);
+  else localStorage.removeItem('diabet_patient_name');
+  updateHeaderName();
+}
+function updateHeaderName() {
+  const name = document.getElementById('patient-name').value.trim();
+  const el = document.getElementById('subtitle');
+  const period = el.dataset.period || '';
+  el.textContent = (name ? name + ' · ' : '') + period;
+}
+
+// ============= LOAD DATA =============
+async function loadData() {
+  const from = document.getElementById('from-date').value;
+  const to = document.getElementById('to-date').value;
+  if (!from || !to) return;
+
+  document.getElementById('content').innerHTML = '<div class="loading">Зареждане...</div>';
+
+  try {
+    const [entries, settings, reportData] = await Promise.all([
+      api(`/entries?from=${from}&to=${to}`),
+      api('/settings'),
+      api(`/report?from=${from}&to=${to}`),
+    ]);
+    render(entries, settings, reportData, from, to);
+
+    // Update header
+    const el = document.getElementById('subtitle');
+    el.dataset.period = `Период: ${fmtDate(from)} — ${fmtDate(to)}`;
+    updateHeaderName();
+  } catch(e) {
+    if (e.message !== 'Unauthorized') {
+      document.getElementById('content').innerHTML = `<div class="empty">Грешка: ${e.message}</div>`;
+    }
+  }
+}
+
+// ============= RENDER =============
+function render(entries, settings, report, from, to) {
+  const parts = [];
+
+  // ---------- Schema reference (for dietitian to compare) ----------
+  const corrRows = settings.corrections.map(c =>
+    `<tr><td>${c.min_bg}–${c.max_bg === 999 ? '∞' : c.max_bg}</td><td>+${c.add_units} U</td></tr>`
+  ).join('');
+  parts.push(`
+    <div class="schema">
+      <strong>Текуща схема:</strong>
+      I:C = <strong>${settings.ic_ratio_normal} U/XE</strong> (1 XE = ${settings.xe_grams_carbs}g) ·
+      target ден <strong>${settings.target_bg_low}–${settings.target_bg_high}</strong> / нощ <strong>${settings.target_bg_night_low}–${settings.target_bg_night_high}</strong> mmol/L ·
+      хипо праг: <strong>${settings.hypo_threshold}</strong> ·
+      вечерна старт. доза: <strong>${settings.evening_slow_dose} U</strong> (± ${settings.evening_dose_step} U/ден по сутрешна BG)
+      <table style="display: inline-table; margin-left: 20px; vertical-align: middle;">
+        <thead><tr><th>BG (mmol/L)</th><th>Корекция</th></tr></thead>
+        <tbody>${corrRows}</tbody>
+      </table>
+    </div>
+  `);
+
+  // ---------- Summary ----------
+  if (report.counts.bg > 0) {
+    const empIC = report.meals && report.meals.actual_ic_ratio;
+    parts.push(`
+      <div class="summary">
+        <div class="summary-grid">
+          <div class="summary-cell"><div class="label">Средна BG</div><div class="value">${report.bg_stats.mean ?? '—'}<span class="unit">mmol/L</span></div></div>
+          <div class="summary-cell"><div class="label">GMI</div><div class="value">${report.bg_stats.gmi_pct ?? '—'}<span class="unit">%</span></div></div>
+          <div class="summary-cell"><div class="label">CV</div><div class="value">${report.bg_stats.cv_pct ?? '—'}<span class="unit">%</span></div></div>
+          <div class="summary-cell"><div class="label">TIR (3.9–10)</div><div class="value">${report.tir.pct.in_range}<span class="unit">%</span></div></div>
+          <div class="summary-cell"><div class="label">Хипо (<3.9)</div><div class="value" style="color:${(report.tir.pct.very_low+report.tir.pct.low)>4?'var(--danger)':'var(--text)'}">${(report.tir.pct.very_low+report.tir.pct.low).toFixed(1)}<span class="unit">%</span></div></div>
+          <div class="summary-cell"><div class="label">Общо XE</div><div class="value">${report.meals ? report.meals.xe_total : 0}<span class="unit">XE</span></div></div>
+          <div class="summary-cell"><div class="label">TDD/ден</div><div class="value">${report.insulin.tdd_per_active_day}<span class="unit">U</span></div></div>
+          <div class="summary-cell"><div class="label">Реален I:C</div><div class="value">${empIC ?? '—'}<span class="unit">U/XE</span></div></div>
+        </div>
+      </div>
+    `);
+  }
+
+  // ---------- Group entries by day ----------
+  // Entries come sorted DESC; we want chronological per-day but days chronological too
+  const sorted = entries.slice().sort((a, b) => new Date(a.time) - new Date(b.time));
+
+  if (!sorted.length) {
+    parts.push('<div class="empty">Няма записи в избрания период.</div>');
+    document.getElementById('content').innerHTML = parts.join('');
+    return;
+  }
+
+  const byDay = {};
+  for (const e of sorted) {
+    const day = isoDate(new Date(e.time));  // локален ден, не UTC substring
+    if (!byDay[day]) byDay[day] = [];
+    byDay[day].push(e);
+  }
+
+  const dayIcons = { bg: '', fast: '💉', slow: '🌙', ketones: '⚠', meal: '🍽' };
+  const dayColors = { bg: '', fast: 'var(--fast)', slow: 'var(--slow)', ketones: 'var(--ketones)', meal: 'var(--meal)' };
+
+  // ---------- Group entries at same timestamp into a single row ----------
+  function bucketByMinute(dayEntries) {
+    // Same-timestamp entries (within 1 minute) belong to a single "event row"
+    const buckets = [];
+    let currentBucket = null;
+    for (const e of dayEntries) {
+      const t = new Date(e.time).getTime();
+      if (!currentBucket || Math.abs(t - currentBucket.t) > 60000) {
+        currentBucket = { t, time: e.time, entries: [] };
+        buckets.push(currentBucket);
+      }
+      currentBucket.entries.push(e);
+    }
+    return buckets;
+  }
+
+  Object.keys(byDay).sort().forEach(day => {
+    const dayEntries = byDay[day];
+    const dayReport = report.daily.find(d => d.date === day);
+    const buckets = bucketByMinute(dayEntries);
+
+    // Day-level stats
+    const statsHtml = dayReport
+      ? `TDD ${dayReport.tdd || 0} U · XE ${dayReport.xe || 0} · BG ${dayReport.bg_count} измервания (${dayReport.bg_min ?? '—'}–${dayReport.bg_max ?? '—'})`
+      : '';
+
+    const dayName = fmtDayName(day);
+
+    // Build event rows
+    const rows = buckets.map(b => {
+      // Aggregate by type within same-minute bucket
+      const byType = {};
+      for (const e of b.entries) {
+        if (!byType[e.type]) byType[e.type] = [];
+        byType[e.type].push(e);
+      }
+
+      const bgE = byType.bg && byType.bg[0];
+      const mealE = byType.meal && byType.meal[0];
+      const fastSum = (byType.fast || []).reduce((s, e) => s + e.value, 0);
+      const slowSum = (byType.slow || []).reduce((s, e) => s + e.value, 0);
+      const ketE = byType.ketones && byType.ketones[0];
+
+      // Determine icon (priority: meal > slow > fast > ketones > bg)
+      let icon = '';
+      if (mealE) icon = '🍽';
+      else if (slowSum > 0) icon = '🌙';
+      else if (fastSum > 0) icon = '💉';
+      else if (ketE) icon = '⚠';
+
+      // Filter out auto-generated notes from meal workflow — noise for the dietitian.
+      // Patterns from meal.html: "преди: ...", "преди хранене", "за X XE (авто-калк)",
+      // "за X XE (override)", "override за X XE", "вечерна доза", "вечерна доза след ..."
+      const isAutoNote = (n) => {
+        if (!n) return true;
+        const s = n.trim();
+        if (!s) return true;
+        return (
+          /^преди хранене(\s*\(.+\))?$/i.test(s) ||
+          /^преди вечерна доза(\s*\(.+\))?$/i.test(s) ||
+          /^за\s+[\d.,]+\s+XE\s*\(.*\)$/i.test(s) ||
+          /^override за\s+[\d.,]+\s+XE$/i.test(s) ||
+          /^вечерна доза(\s+след\s+.+)?$/i.test(s)
+        );
+      };
+      // Strip "преди: " prefix that meal workflow adds to bg.notes when food is described
+      const stripPrefix = (n) => (n || '').replace(/^преди:\s*/i, '').trim();
+
+      // Priority: if a meal entry exists at this timestamp, its notes are the source of truth.
+      // Otherwise fall back to bg/fast/slow notes.
+      let foodDesc = '';
+      if (mealE && mealE.notes) {
+        foodDesc = mealE.notes;
+      } else if (bgE && bgE.notes && !isAutoNote(bgE.notes)) {
+        foodDesc = stripPrefix(bgE.notes);
+      }
+
+      // Collect additional notes from insulin entries, but ONLY if:
+      // - No meal entry at this timestamp (old-style records where food lives in fast.notes)
+      // - The note isn't an auto-generated pattern
+      // - The note isn't already contained in foodDesc
+      let extraNotes = '';
+      if (!mealE) {
+        const insulinNotes = [...(byType.fast || []), ...(byType.slow || [])]
+          .map(e => e.notes)
+          .filter(n => n && !isAutoNote(n) && !foodDesc.includes(n));
+        // Dedupe (fast and slow may share the same food note in old records)
+        const seen = new Set();
+        const uniq = insulinNotes.filter(n => { if (seen.has(n)) return false; seen.add(n); return true; });
+        extraNotes = uniq.join('; ');
+      }
+      const combinedNotes = [foodDesc, extraNotes].filter(Boolean).join(' · ');
+
+      const bgHtml = bgE ? `<span class="bg-num ${bgClass(bgE.value)}">${bgE.value}</span>` : '—';
+      const xeHtml = mealE ? mealE.value : '—';
+      const fastHtml = fastSum > 0 ? `<span style="color:var(--fast);font-weight:600">${fastSum}</span>` : '—';
+      const slowHtml = slowSum > 0 ? `<span style="color:var(--slow);font-weight:600">${slowSum}</span>` : '—';
+      const ketHtml = ketE ? `<span style="color:${ketE.value >= 1.5 ? 'var(--danger)' : ketE.value >= 0.6 ? 'var(--high)' : 'var(--text)'};font-weight:600">${ketE.value}</span>` : '—';
+
+      return `<tr>
+        <td class="col-time">${fmtTime(b.time)}</td>
+        <td class="col-icon">${icon}</td>
+        <td class="col-bg">${bgHtml}</td>
+        <td class="col-xe">${xeHtml}</td>
+        <td class="col-food">${escapeHtml(combinedNotes)}</td>
+        <td class="col-fast">${fastHtml}</td>
+        <td class="col-slow">${slowHtml}</td>
+        <td class="col-ket">${ketHtml}</td>
+        <td class="col-dietitian dietitian-cell"></td>
+      </tr>`;
+    }).join('');
+
+    // Two empty rows at end of day for dietitian notes
+    const emptyRows = `
+      <tr class="empty-row"><td colspan="8"></td><td class="dietitian-cell"></td></tr>
+      <tr class="empty-row"><td colspan="8"></td><td class="dietitian-cell"></td></tr>
+    `;
+
+    parts.push(`
+      <div class="day-block">
+        <div class="day-header">
+          ${fmtDate(day)}<span class="day-name">${dayName}</span>
+          <span class="day-stats">${statsHtml}</span>
+        </div>
+        <table class="events">
+          <thead>
+            <tr>
+              <th class="col-time">Час</th>
+              <th class="col-icon"></th>
+              <th class="col-bg">BG</th>
+              <th class="col-xe">XE</th>
+              <th class="col-food">Храна / бележка</th>
+              <th class="col-fast">Бърз</th>
+              <th class="col-slow">Бавен</th>
+              <th class="col-ket">Кетони</th>
+              <th class="col-dietitian">Бележки на диетолога</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+            ${emptyRows}
+          </tbody>
+        </table>
+      </div>
+    `);
+  });
+
+  // Signatures block at the end
+  parts.push(`
+    <div class="signatures">
+      <div class="sig-block">
+        <div class="label">Пациент — подпис, дата</div>
+      </div>
+      <div class="sig-block">
+        <div class="label">Диетолог — подпис, дата</div>
+      </div>
+    </div>
+    <div class="footer no-print">
+      Разпечатката е предназначена за преглед и бележки от диетолога. Цветното маркиране на BG следва Battelino 2019.
+    </div>
+  `);
+
+  document.getElementById('content').innerHTML = parts.join('');
+}
+
+// ============= INIT =============
+document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.querySelectorAll('.presets .btn').forEach(b => {
+  b.addEventListener('click', () => applyPreset(b.dataset.preset));
+});
+
+// Restore patient name from localStorage
+const savedName = localStorage.getItem('diabet_patient_name');
+if (savedName) document.getElementById('patient-name').value = savedName;
+
+(async () => {
+  await checkAuth();
+  if (authMode === 'login' && !getToken()) {
+    showLogin();
+  } else {
+    applyPreset('5');  // default
+  }
+})();
+</script>
+</body>
+</html>
