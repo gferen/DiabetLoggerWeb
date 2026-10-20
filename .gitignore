@@ -12,5 +12,3 @@ zadeploy/
 juggluco_watermark.json
 dosing-scheme.docx
 *.html-[0-9]
-juggluco_pull.py
-static/cgm_view.html

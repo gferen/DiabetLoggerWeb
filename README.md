@@ -40,6 +40,10 @@ docker compose up -d --build
 | `DIABET_JWT_SECRET` | авто в `data/.jwt_secret` | Ключ за JWT; рестартът не обезсилва токените, ако `data/` се пази |
 | `DIABET_TOKEN_TTL_DAYS` | `30` | Валидност на токена |
 | `DIABET_TZ` | `Europe/Sofia` | Зона по подразбиране за дневните статистики и отчети. Може да се смени от Настройки (виж "Часова зона"); времената се пазят в UTC |
+| `JUGGLUCO_HOST` | – | Адрес на телефона с Juggluco (достъпен през WireGuard). Нужен за CGM синхронизацията |
+| `JUGGLUCO_PORT` | `17580` | Порт на webserver-а на Juggluco |
+| `JUGGLUCO_API_SECRET` | – | `api_secret` на Juggluco (auth в пътя на URL-а) |
+| `DIABET_LOGGER_API_KEY` | = `DIABET_API_KEY` | По желание: друг ключ само за `juggluco_pull.py`. По подразбиране скриптът ползва `DIABET_API_KEY` |
 | `DIABET_DB`, `DIABET_SECRET_FILE` | `/data/...` | Пътища вътре в контейнера |
 
 `.env` е с права `600` и никога не влиза в git. Без нито една auth променлива приложението е отворено.
@@ -52,7 +56,7 @@ juggluco_pull.py       дърпа CGM от Juggluco на телефона (пр�
 juggluco_watermark.json докъде е стигнал последният pull
 dedupe.py              намира и чисти дублирани записи, по подразбиране само отчет (виж "Дубликати")
 qa.py                  QA тестове: python3 qa.py
-static/                index.html, meal.html, report.html, print-review.html
+static/                index.html, meal.html, report.html, print-review.html, cgm_view.html
 data/diabet.db         SQLite (bind mount)
 ```
 
@@ -151,6 +155,8 @@ data/diabet.db         SQLite (bind mount)
 ## CGM
 
 - `POST /api/cgm-sync` (бутонът „⟳ Обнови") пуска `juggluco_pull.py`, който дърпа новите показания от телефона през WireGuard и ги записва с бележка `[CGM]`. Прогресът се пази в `juggluco_watermark.json`, така че всеки pull е инкрементален.
+- **Конфигурация без тайни във файловете:** `JUGGLUCO_HOST`, `JUGGLUCO_PORT` и `JUGGLUCO_API_SECRET` са в `.env` и стигат до контейнера през `environment:` в `docker-compose.yml`. Скриптът ползва `DIABET_API_KEY` за достъп до приложението. Ако липсва променлива, излиза с код 2 и казва коя (без стойности). Върху хоста (ръчно или cron) скриптът чете и `.env` до себе си, а истинските променливи имат предимство.
+- **Страницата `/static/cgm_view.html`** (CGM + ръчни измервания) няма ключ в кода. Пита за API ключ при първо отваряне и го пази само в `localStorage` на браузъра, под същите имена като останалите страници (`diabet_api_key`, `diabet_token`). Бутонът „API ключ" го сменя, а при отказан достъп автообновяването спира.
 - Автообновяването на страницата само презарежда от базата. Ако искаш то да дърпа и от телефона, в `index.html` има константа `AUTO_SYNC_CGM` (по подразбиране `false`).
 - Повторно изпратено показание не се дублира заради `UNIQUE(type, time)`.
 

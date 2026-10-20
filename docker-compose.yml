@@ -28,3 +28,7 @@ services:
       # === CGM SYNC (juggluco_pull.py) ===
       # Internal port is 8000 (see ports mapping above: "8765:8000")
       - DIABET_LOGGER_URL=http://127.0.0.1:8000/api/entries
+      # === JUGGLUCO (телефона) - стойностите са в .env, не тук ===
+      - JUGGLUCO_HOST=${JUGGLUCO_HOST:-}
+      - JUGGLUCO_PORT=${JUGGLUCO_PORT:-17580}
+      - JUGGLUCO_API_SECRET=${JUGGLUCO_API_SECRET:-}
