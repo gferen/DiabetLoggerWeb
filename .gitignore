@@ -12,3 +12,5 @@ zadeploy/
 juggluco_watermark.json
 dosing-scheme.docx
 *.html-[0-9]
+graphify-out/
+.gitattributes

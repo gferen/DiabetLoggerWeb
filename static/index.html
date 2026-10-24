@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="bg">
 <head>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩸</text></svg>">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Diabet Logger</title>
@@ -686,6 +687,13 @@
 </header>
 
 <div class="stats" id="stats"></div>
+<div class="panel" id="hypo-panel" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px">
+  <span style="font-weight:600">🍬 Ниска — бързи въглехидрати:</span>
+  <input type="number" id="hypo-g" value="3" min="1" max="50" step="1" style="width:70px" title="грама в една доза (напр. таблетка глюкоза)"> g ×
+  <input type="number" id="hypo-n" value="5" min="1" max="20" step="1" style="width:60px" title="брой">
+  <input type="text" id="hypo-notes" placeholder="бележка (по желание)" style="flex:1;min-width:140px">
+  <button class="btn" onclick="addHypo()">Запиши сега</button>
+</div>
 
 <div class="panel">
   <h2>Time-in-Range
@@ -878,7 +886,7 @@
   <div class="actions">
     <button class="btn secondary" onclick="exportJSON()">Export JSON</button>
     <button class="btn secondary" onclick="document.getElementById('import-file').click()">Import JSON</button>
-    <button class="btn secondary" onclick="exportCSV()">Export CSV</button>
+    <input type="date" id="exp-from" title="От дата (празно = от началото)" style="width:auto"> <input type="date" id="exp-to" title="До дата (празно = до днес)" style="width:auto"> <button class="btn secondary" onclick="exportCSV()">Export CSV</button>
     <button class="btn danger" onclick="clearAll()">Изтрий всичко</button>
     <button class="btn secondary" onclick="logout()" id="logout-btn" style="display:none">Изход</button>
     <button class="btn secondary" onclick="setApiKey()" id="apikey-btn">API Key...</button>
@@ -1137,6 +1145,48 @@ async function addEntry(type) {
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
+async function addHypo() {
+  const g = parseFloat(document.getElementById('hypo-g').value);
+  const n = parseInt(document.getElementById('hypo-n').value, 10);
+  if (!(g > 0) || !(n > 0)) { toast('Грамове и брой са задължителни', true); return; }
+  const xeG = parseFloat(document.getElementById('xe-grams-input')?.value) || 12;
+  const grams = g * n;
+  const extra = document.getElementById('hypo-notes').value.trim();
+  const payload = { type: 'meal', value: Math.round(grams / xeG * 100) / 100, carbs_g: grams,
+                    time: new Date().toISOString(), notes: `[ХИПО] ${n}×${g}g` + (extra ? ' — ' + extra : '') };
+  try {
+    await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
+    document.getElementById('hypo-notes').value = '';
+    await reload();
+    toast(`Записано: ${grams} g (${payload.value} XE)`);
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+// Trend of the CGM over the last ~15 min (independent of the CGM filter).
+function bgTrend(all, nowMs) {
+  const cg = all.filter(e => e.type === 'bg' && isCgm(e))
+    .map(e => ({ t: new Date(e.time).getTime(), v: e.value }))
+    .filter(p => nowMs - p.t <= 25 * 60 * 1000).sort((a, b) => a.t - b.t);
+  if (cg.length < 3) return null;
+  const last = cg[cg.length - 1];
+  if (nowMs - last.t > 10 * 60 * 1000) return null;          // CGM is stale
+  const ref = cg.filter(p => last.t - p.t >= 12 * 60 * 1000).pop() || cg[0];
+  const mins = (last.t - ref.t) / 60000;
+  if (mins < 8) return null;
+  const rate = (last.v - ref.v) / mins;                         // mmol/L per minute
+  const a = Math.abs(rate);
+  const arrow = a < 0.06 ? '→' : rate > 0 ? (a < 0.11 ? '↗' : a < 0.17 ? '↑' : '⇈')
+                                         : (a < 0.11 ? '↘' : a < 0.17 ? '↓' : '⇊');
+  return { arrow, rate, fast: a >= 0.11 };
+}
+
+// Fast insulin in the last `hours` hours + time of the last dose.
+function fastRecent(all, nowMs, hours) {
+  const f = all.filter(e => e.type === 'fast' && nowMs - new Date(e.time).getTime() < hours * 3600 * 1000)
+    .sort((a, b) => new Date(b.time) - new Date(a.time));
+  return { units: f.reduce((s, e) => s + e.value, 0), last: f.length ? f[0].time : null };
+}
+
 async function deleteEntry(id) {
   if (!confirm('Изтрий запис?')) return;
   try {
@@ -1190,6 +1240,13 @@ function renderStats() {
   const fast24 = ve.filter(e => e.type==='fast' && now - new Date(e.time).getTime() < day).reduce((s,e)=>s+e.value,0);
   const slow24 = ve.filter(e => e.type==='slow' && now - new Date(e.time).getTime() < day).reduce((s,e)=>s+e.value,0);
 
+  const tr = bgTrend(entries, now);
+  const trendHtml = tr
+    ? ` <span title="CGM, последните ~15 мин" style="font-size:0.8em;color:${tr.fast ? 'var(--danger)' : 'var(--muted)'}">${tr.arrow}<span class="unit">${tr.rate > 0 ? '+' : ''}${tr.rate.toFixed(2)}/мин</span></span>`
+    : '';
+  const f4 = fastRecent(entries, now, 4);
+  const fast4Html = `<div class="stat"><div class="label">Бърз 4ч</div><div class="value" style="color:var(--fast)">${f4.units}<span class="unit">U${f4.last ? ' · посл. ' + new Date(f4.last).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' }) : ''}</span></div></div>`;
+
   const gmiHtml = (statsData && statsData.gmi_pct != null)
     ? `<div class="stat"><div class="label">GMI (≈HbA1c)</div><div class="value">${statsData.gmi_pct}<span class="unit">% · ${statsData.days}д</span></div></div>`
     : '';
@@ -1198,9 +1255,10 @@ function renderStats() {
     : '';
 
   document.getElementById('stats').innerHTML = `
-    <div class="stat"><div class="label">Последна BG</div><div class="value" style="color:${latest ? bgColor(latest.value) : 'var(--muted)'}">${latest ? latest.value : '—'}<span class="unit">mmol/L</span></div></div>
+    <div class="stat"><div class="label">Последна BG</div><div class="value" style="color:${latest ? bgColor(latest.value) : 'var(--muted)'}">${latest ? latest.value : '—'}<span class="unit">mmol/L</span>${trendHtml}</div></div>
     <div class="stat"><div class="label">Средна 24ч</div><div class="value">${avg24}<span class="unit">mmol/L</span></div></div>
     ${gmiHtml}
+    ${fast4Html}
     <div class="stat"><div class="label">Бърз 24ч</div><div class="value" style="color:var(--fast)">${fast24}<span class="unit">U</span></div></div>
     <div class="stat"><div class="label">Бавен 24ч</div><div class="value" style="color:var(--slow)">${slow24}<span class="unit">U</span></div></div>
     ${ketoneHtml}
@@ -1287,7 +1345,11 @@ function buildChartData() {
     if (i > 0 && p.x - cgm[i - 1].x > gapMs) cgmLine.push({ x: cgm[i - 1].x + 1, y: null });
     cgmLine.push(p);
   });
-  return { cgm: cgmLine, bg: pick('bg', false), ketones: pick('ketones'), fast: pick('fast'), slow: pick('slow') };
+  const meals = ve.filter(e => e.type === 'meal' && new Date(e.time).getTime() >= cutoff)
+    .map(e => ({ x: new Date(e.time).getTime(), y: e.value, n: e.notes || '', h: (e.notes || '').startsWith('[ХИПО]') }))
+    .sort((a, b) => a.x - b.x);
+  return { cgm: cgmLine, bg: pick('bg', false), ketones: pick('ketones'), fast: pick('fast'), slow: pick('slow'),
+           meal: meals.filter(m => !m.h), hypo: meals.filter(m => m.h) };
 }
 
 function renderChart() {
@@ -1302,6 +1364,8 @@ function renderChart() {
     chart.data.datasets[2].data = d.ketones;
     chart.data.datasets[3].data = d.fast;
     chart.data.datasets[4].data = d.slow;
+    chart.data.datasets[5].data = d.meal;
+    chart.data.datasets[6].data = d.hypo;
     chart.update('none');
     return;
   }
@@ -1315,7 +1379,9 @@ function renderChart() {
         { label: 'BG ръчно (mmol/L)', data: d.bg, borderColor: '#4ade80', backgroundColor: 'rgba(74, 222, 128, 0.1)', borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, tension: 0.3, showLine: d.cgm.length === 0, yAxisID: 'y' },
         { label: 'Кетони (mmol/L)', data: d.ketones, borderColor: '#a855f7', backgroundColor: '#a855f7', borderWidth: 0, pointRadius: 5, pointStyle: 'star', showLine: false, yAxisID: 'y' },
         { label: 'Бърз (U)', data: d.fast, borderColor: '#f59e0b', backgroundColor: '#f59e0b', borderWidth: 0, pointRadius: 6, pointStyle: 'triangle', showLine: false, yAxisID: 'y1' },
-        { label: 'Бавен (U)', data: d.slow, borderColor: '#3b82f6', backgroundColor: '#3b82f6', borderWidth: 0, pointRadius: 6, pointStyle: 'rectRot', showLine: false, yAxisID: 'y1' }
+        { label: 'Бавен (U)', data: d.slow, borderColor: '#3b82f6', backgroundColor: '#3b82f6', borderWidth: 0, pointRadius: 6, pointStyle: 'rectRot', showLine: false, yAxisID: 'y1' },
+        { label: 'Храна (XE)', data: d.meal, borderColor: '#22d3ee', backgroundColor: '#22d3ee', borderWidth: 0, pointRadius: 6, pointStyle: 'circle', showLine: false, yAxisID: 'y1' },
+        { label: 'Ниска — въглехидрати (XE)', data: d.hypo, borderColor: '#ef4444', backgroundColor: '#ef4444', pointRadius: 7, pointStyle: 'crossRot', borderWidth: 3, showLine: false, yAxisID: 'y1' }
       ]
     },
     options: {
@@ -1323,7 +1389,10 @@ function renderChart() {
       interaction: { mode: 'nearest', intersect: false },
       plugins: {
         legend: { labels: { color: '#e6eaf0' } },
-        tooltip: { callbacks: { title: (items) => new Date(items[0].parsed.x).toLocaleString('bg-BG') } },
+        tooltip: { callbacks: {
+          title: (items) => new Date(items[0].parsed.x).toLocaleString('bg-BG'),
+          afterLabel: (item) => (item.raw && item.raw.n) ? item.raw.n : ''
+        } },
         zoom: {
           zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' },
           pan: { enabled: true, mode: 'x' },
@@ -1643,19 +1712,26 @@ async function exportCSV() {
     if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, true);
     return;
   }
-  const rows = [['type','time_utc','time_local','value','unit','notes']];
-  for (const type of ['bg','fast','slow','ketones','meal']) {
-    (data[type] || []).forEach(e => {
-      const unit = (type === 'bg' || type === 'ketones') ? 'mmol/L' : (type === 'meal' ? 'XE' : 'U');
+  const fromV = document.getElementById('exp-from')?.value || '';
+  const toV = document.getElementById('exp-to')?.value || '';
+  const fromT = fromV ? new Date(fromV + 'T00:00:00').getTime() : -Infinity;
+  const toT = toV ? new Date(toV + 'T23:59:59.999').getTime() : Infinity;
+  if (fromT > toT) { toast('„От“ е след „До“', true); return; }
+  const rows = [['type','time_utc','time_local','value','unit','notes','carbs_g','meal_time','meta']];
+  for (const type of ['bg','fast','slow','ketones','meal','activity','alcohol','device_change']) {
+    (data[type] || []).filter(e => { const t = new Date(e.time).getTime(); return t >= fromT && t <= toT; }).forEach(e => {
+      const unit = ({ bg: 'mmol/L', ketones: 'mmol/L', meal: 'XE', fast: 'U', slow: 'U', activity: 'min', alcohol: 'бр.' })[type] || '';
       const localTime = new Date(e.time).toLocaleString('bg-BG');
-      rows.push([type.toUpperCase(), e.time, localTime, e.value, unit, e.notes || '']);
+      rows.push([type.toUpperCase(), e.time, localTime, e.value ?? e.units ?? '', unit, e.notes || '',
+                 e.carbs_g ?? '', e.meal_time ?? '', e.meta ? JSON.stringify(e.meta) : '']);
     });
   }
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `diabet-log-${new Date().toISOString().slice(0,10)}.csv`;
+  const today = new Date().toISOString().slice(0,10);
+  a.download = (fromV || toV) ? `diabet-log-${fromV || 'start'}_${toV || today}.csv` : `diabet-log-${today}.csv`;
   a.click();
 }
 async function importJSON(ev) {
