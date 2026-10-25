@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Glucose — stream panel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩸</text></svg>">
+<!--
+  OBS Browser Source:  http://<server>:8765/static/overlay.html#key=<DIABET_API_KEY>
+  Width 400, height 260. Background is transparent.
+  Hash options (combine with &):
+    key=...     API key (the #hash is never sent to the server, so it is not in server logs)
+    sync=0      do NOT pull from the phone, only read what is already in the DB
+    every=60    seconds between refreshes (min 30)
+  States: green normal · yellow < 5 or falling >= 0.11/min · red < 4 · grey = data older than 10 min
+-->
+<style>
+  html, body { margin: 0; background: transparent; }
+  body { font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif; color: #e8eef5; }
+  .panel { width: 360px; box-sizing: border-box; margin: 12px; padding: 18px 20px;
+           background: #121a22; border: 2px solid #243140; border-radius: 14px;
+           display: flex; flex-direction: column; gap: 6px; }
+  .top { display: flex; justify-content: space-between; font-size: 12px; color: #9aa7b6; }
+  .top .title { font-weight: 700; letter-spacing: .1em; }
+  .main { display: flex; align-items: baseline; gap: 10px; }
+  .val { font-size: 64px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .unit { font-size: 15px; color: #9aa7b6; }
+  .arrow { font-size: 44px; font-weight: 600; line-height: 1; margin-left: auto; }
+  .rate { font-size: 13px; color: #9aa7b6; font-variant-numeric: tabular-nums; }
+  .foot { font-size: 11px; color: #9aa7b6; }
+  .ok   { --c: #4ade80; }
+  .warn { --c: #fbbf24; border-color: #fbbf24; }
+  .low  { --c: #f87171; border-color: #f87171; background: #2a1215; }
+  .stale{ --c: #8b98a9; border-color: #3a4757; }
+  .val, .arrow, .line { color: var(--c); stroke: var(--c); }
+  .warn .rate, .low .title { color: var(--c); font-weight: 700; }
+  .low .top, .low .unit, .low .rate, .low .foot { color: #f3c4c4; }
+  .msg { font-size: 14px; color: #9aa7b6; }
+</style>
+</head>
+<body>
+<div class="panel stale" id="panel">
+  <div class="top"><span class="title" id="title">GLUCOSE</span><span id="age">—</span></div>
+  <div class="main">
+    <span class="val" id="val">—</span><span class="unit">mmol/L</span><span class="arrow" id="arrow"></span>
+  </div>
+  <span class="rate" id="rate">loading…</span>
+  <svg viewBox="0 0 312 60" width="312" height="60" aria-hidden="true">
+    <rect id="band" x="0" y="20" width="312" height="30.5" fill="#1c2a36"></rect>
+    <polyline class="line" id="line" points="" fill="none" stroke-width="2.5" stroke-linejoin="round"></polyline>
+  </svg>
+  <span class="foot">3 h · target 3.9–10 · Libre 2 / Juggluco</span>
+</div>
+<script>
+const H = Object.fromEntries(location.hash.slice(1).split('&').filter(Boolean).map(p => p.split('=').map(decodeURIComponent)));
+if (H.key) localStorage.setItem('diabet_api_key', H.key);
+const KEY = H.key || localStorage.getItem('diabet_api_key') || '';
+const TOKEN = localStorage.getItem('diabet_token') || '';
+const SYNC = H.sync !== '0';
+const EVERY = Math.max(30, parseInt(H.every || '60', 10)) * 1000;
+const WINDOW_MS = 3 * 3600 * 1000;
+if (H.scale) document.body.style.zoom = H.scale;   // #scale=2 -> source 800x520, sharp
+
+function headers() {
+  const h = {};
+  if (KEY) h['X-API-Key'] = KEY;
+  if (TOKEN) h['Authorization'] = 'Bearer ' + TOKEN;
+  return h;
+}
+const isCgm = e => (e.notes || '').includes('[CGM]');
+const $ = id => document.getElementById(id);
+
+// Same rule as the main page: compare the newest reading with one >= 12 min older.
+function trend(pts, nowMs) {
+  const r = pts.filter(p => nowMs - p.t <= 25 * 60 * 1000);
+  if (r.length < 3) return null;
+  const last = r[r.length - 1];
+  const ref = r.filter(p => last.t - p.t >= 12 * 60 * 1000).pop() || r[0];
+  const mins = (last.t - ref.t) / 60000;
+  if (mins < 8) return null;
+  const rate = (last.v - ref.v) / mins, a = Math.abs(rate);
+  const arrow = a < 0.06 ? '→' : rate > 0 ? (a < 0.11 ? '↗' : a < 0.17 ? '↑' : '⇈')
+                                         : (a < 0.11 ? '↘' : a < 0.17 ? '↓' : '⇊');
+  return { rate, arrow };
+}
+
+function stateOf(v, tr, ageMin) {
+  if (ageMin > 10) return 'stale';
+  if (v < 4) return 'low';
+  if (v < 5 || (tr && tr.rate <= -0.11)) return 'warn';
+  return 'ok';
+}
+
+const yOf = v => 60 - (Math.min(14, Math.max(2, v)) - 2) / 12 * 60;
+
+function render(entries, nowMs) {
+  const pts = entries.filter(e => e.type === 'bg' && isCgm(e))
+    .map(e => ({ t: new Date(e.time).getTime(), v: e.value }))
+    .filter(p => nowMs - p.t <= WINDOW_MS).sort((a, b) => a.t - b.t);
+  const panel = $('panel');
+  if (!pts.length) {
+    panel.className = 'panel stale';
+    $('val').textContent = '—'; $('arrow').textContent = ''; $('age').textContent = '';
+    $('rate').textContent = 'no CGM data in the last 3 h'; $('line').setAttribute('points', '');
+    return 'stale';
+  }
+  const last = pts[pts.length - 1];
+  const ageMin = Math.round((nowMs - last.t) / 60000);
+  const tr = trend(pts, nowMs);
+  const st = stateOf(last.v, tr, ageMin);
+  panel.className = 'panel ' + st;
+  $('title').textContent = st === 'low' ? 'LOW · PAUSE' : 'GLUCOSE';
+  $('val').textContent = last.v.toFixed(1);
+  $('arrow').textContent = st === 'stale' ? '' : (tr ? tr.arrow : '');
+  $('age').textContent = ageMin <= 0 ? 'now' : `${ageMin} min ago`;
+  $('rate').textContent = st === 'stale' ? `no new data for ${ageMin} min`
+    : tr ? `${tr.rate > 0 ? '+' : tr.rate < 0 ? '−' : ''}${Math.abs(tr.rate).toFixed(2)} mmol/L per min` : 'trend: not enough data';
+  const t0 = nowMs - WINDOW_MS;
+  $('line').setAttribute('points', pts.map(p => `${((p.t - t0) / WINDOW_MS * 312).toFixed(1)},${yOf(p.v).toFixed(1)}`).join(' '));
+  $('band').setAttribute('fill', st === 'low' ? '#3a1d22' : '#1c2a36');
+  return st;
+}
+
+let busy = false;
+async function tick(doSync) {
+  if (busy) return; busy = true;
+  try {
+    if (doSync) {
+      const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 90000);
+      try { await fetch('/api/cgm-sync', { method: 'POST', headers: headers(), signal: ac.signal }); }
+      catch (e) { /* phone unreachable: still show what the DB has */ }
+      finally { clearTimeout(to); }
+    }
+    const from = new Date(Date.now() - WINDOW_MS).toISOString();
+    const res = await fetch(`/api/entries?type=bg&from=${encodeURIComponent(from)}`, { headers: headers() });
+    if (res.status === 401) { $('panel').className = 'panel stale'; $('rate').textContent = 'invalid key — add #key=… to the URL'; return; }
+    if (!res.ok) throw new Error(res.status);
+    render(await res.json(), Date.now());
+  } catch (e) {
+    $('rate').textContent = 'server unreachable';
+  } finally { busy = false; }
+}
+
+tick(false).then(() => { if (SYNC) tick(true); });
+setInterval(() => tick(SYNC), EVERY);
+</script>
+</body>
+</html>

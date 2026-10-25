@@ -349,7 +349,7 @@ def check_auth(
 # ---------- MODELS ----------
 class EntryIn(BaseModel):
     type: Literal["bg", "fast", "slow", "ketones", "meal", "activity", "alcohol", "device_change"]
-    value: float = Field(0, ge=0, lt=100)
+    value: float = Field(0, ge=0, le=600)
     time: str
     notes: Optional[str] = ""
     meal_time: Optional[str] = None       # ISO8601 - начало на хранене, отделно от 'time' (момент на дозата)
@@ -362,6 +362,8 @@ class EntryIn(BaseModel):
         # Всички други типове пазят старото поведение: value е задължителна и > 0.
         if self.type != "device_change" and self.value <= 0:
             raise ValueError("value must be > 0 for this type")
+        if self.type != "activity" and self.value >= 100:
+            raise ValueError("value must be < 100 for this type")
         return self
 
 
