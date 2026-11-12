@@ -724,6 +724,9 @@
   <div class="tab-content active" data-tab="bg">
     <div class="row">
       <div><label>Стойност (mmol/L)</label><input type="number" id="bg-value" step="0.1" min="1" max="30" placeholder="напр. 7.2"></div>
+      <div><label>Източник</label><select id="bg-source" style="width:100%;padding:8px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px">
+        <option value="own">Мой глюкомер</option><option value="hospital">Болничен</option><option value="cgm_manual">CGM (ръчно)</option>
+      </select></div>
       <div><label>Дата и час</label><div class="dt-picker"><input type="date" id="bg-date"><input type="number" id="bg-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="bg-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
     </div>
     <div><label>Бележки (опц.)</label><input type="text" id="bg-notes" placeholder="преди закуска / след храна / ..."></div>
@@ -733,6 +736,20 @@
   <div class="tab-content" data-tab="fast">
     <div class="row">
       <div><label>Единици</label><input type="number" id="fast-value" step="0.5" min="0" max="50" placeholder="напр. 8"></div>
+      <div><label>Доставка</label><select id="fast-delivery" style="width:100%;padding:8px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px">
+        <option value="pump">Помпа</option><option value="pen">Писалка</option><option value="iv">Венозно</option>
+      </select></div>
+    </div>
+    <div class="row">
+      <div><label>Вид инсулин</label><select id="fast-insulin-type" style="width:100%;padding:8px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px">
+        <option value="fiasp">Fiasp</option><option value="novorapid">NovoRapid</option><option value="other">Друг</option>
+      </select></div>
+      <div><label>Вид болус</label><select id="fast-bolus-kind" onchange="document.getElementById('fast-bolus-dur-row').style.display=this.value==='normal'?'none':'flex'" style="width:100%;padding:8px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px">
+        <option value="normal">Нормален</option><option value="extended">Удължен</option><option value="combo">Комбо</option>
+      </select></div>
+    </div>
+    <div class="row" id="fast-bolus-dur-row" style="display:none">
+      <div><label>Продължителност (мин)</label><input type="number" id="fast-bolus-duration" step="5" min="5" max="480" placeholder="напр. 60"></div>
       <div><label>Дата и час на дозата</label><div class="dt-picker"><input type="date" id="fast-date"><input type="number" id="fast-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="fast-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
     </div>
     <div class="row">
@@ -754,6 +771,14 @@
   <div class="tab-content" data-tab="slow">
     <div class="row">
       <div><label>Единици</label><input type="number" id="slow-value" step="0.5" min="0" max="50" placeholder="напр. 20"></div>
+      <div><label>Доставка</label><select id="slow-delivery" style="width:100%;padding:8px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px">
+        <option value="pen">Писалка</option><option value="pump">Помпа</option><option value="iv">Венозно</option>
+      </select></div>
+    </div>
+    <div class="row">
+      <div><label>Вид инсулин</label><select id="slow-insulin-type" style="width:100%;padding:8px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px">
+        <option value="tresiba">Tresiba</option><option value="other">Друг</option>
+      </select></div>
       <div><label>Дата и час</label><div class="dt-picker"><input type="date" id="slow-date"><input type="number" id="slow-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="slow-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
     </div>
     <div><label>Бележки (опц.)</label><input type="text" id="slow-notes" placeholder="нощна доза / ..."></div>
@@ -806,6 +831,9 @@
         <select id="device_change-type" style="width:100%;padding:8px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:8px">
           <option value="ampule">Ампула инсулин</option>
           <option value="sensor">Сензор (CGM)</option>
+          <option value="patch">Пач помпа (резервоар)</option>
+          <option value="pump_base">Основа помпа</option>
+          <option value="settings_change">Смяна настройки</option>
         </select>
       </div>
       <div><label>Дата и час</label><div class="dt-picker"><input type="date" id="device_change-date"><input type="number" id="device_change-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="device_change-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
@@ -1116,10 +1144,16 @@ async function addEntry(type) {
   if (type === 'activity') {
     payload.meta = { intensity: document.getElementById('activity-intensity').value };
   }
+  if (type === 'bg') {
+    payload.meta = { ...(payload.meta||{}), source: document.getElementById('bg-source').value };
+  }
   if (type === 'device_change') {
     payload.meta = { device_type: document.getElementById('device_change-type').value };
   }
   if (type === 'fast') {
+    payload.meta = { ...(payload.meta||{}), delivery: document.getElementById('fast-delivery').value, insulin_type: document.getElementById('fast-insulin-type').value, bolus_kind: document.getElementById('fast-bolus-kind').value };
+    const dur = document.getElementById('fast-bolus-duration').value;
+    if (dur && payload.meta.bolus_kind !== 'normal') payload.meta.bolus_duration_min = parseInt(dur);
     const carbsRaw = document.getElementById('fast-carbs').value;
     if (carbsRaw) payload.carbs_g = parseFloat(carbsRaw);
     const mealToggle = document.getElementById('fast-meal-time-toggle');
@@ -1128,6 +1162,10 @@ async function addEntry(type) {
       if (!mealDt) { toast('Невалиден час за начало на хранене', true); return; }
       payload.meal_time = mealDt.toISOString();
     }
+  }
+
+  if (type === 'slow') {
+    payload.meta = { ...(payload.meta||{}), delivery: document.getElementById('slow-delivery').value, insulin_type: document.getElementById('slow-insulin-type').value };
   }
 
   try {
@@ -1430,9 +1468,22 @@ function renderHistory() {
           let dpRow = '';
           if (day !== lastDay) { lastDay = day; if (dayProfiles[day]) dpRow = dayProfileRow(day, dayProfiles[day]); }
           let type, value, cls;
-          if (e.type === 'bg') { type = 'BG'; value = `${e.value} mmol/L`; cls = 'bg ' + bgClass(e.value); }
-          else if (e.type === 'fast') { type = 'Бърз'; value = `${e.value} U`; cls = 'fast'; }
-          else if (e.type === 'slow') { type = 'Бавен'; value = `${e.value} U`; cls = 'slow'; }
+          if (e.type === 'bg') {
+            const bsrc = e.meta && e.meta.source === 'hospital' ? ' 🏥' : '';
+            type = 'BG'; value = `${e.value} mmol/L${bsrc}`; cls = 'bg ' + bgClass(e.value);
+          }
+          else if (e.type === 'fast') {
+            const fm = e.meta || {};
+            const dlv = fm.delivery === 'pen' ? '🖊' : fm.delivery === 'iv' ? '💉' : '';
+            const bk = fm.bolus_kind === 'extended' ? ' удълж.' : fm.bolus_kind === 'combo' ? ' комбо' : '';
+            const bd = fm.bolus_duration_min ? ` ${fm.bolus_duration_min}м` : '';
+            type = 'Бърз'; value = `${e.value} U${dlv}${bk}${bd}`; cls = 'fast';
+          }
+          else if (e.type === 'slow') {
+            const sm = e.meta || {};
+            const sdlv = sm.delivery === 'pump' ? '⚙' : sm.delivery === 'iv' ? '💉' : '';
+            type = 'Бавен'; value = `${e.value} U${sdlv}`; cls = 'slow';
+          }
           else if (e.type === 'ketones') { type = 'Кетони'; value = `${e.value} mmol/L`; cls = 'ketones ' + ketoneClass(e.value); }
           else if (e.type === 'meal') { type = 'Хранене'; value = `${e.value} XE`; cls = 'meal'; }
           else if (e.type === 'activity') {
@@ -1444,7 +1495,7 @@ function renderHistory() {
           else if (e.type === 'alcohol') { type = 'Алкохол'; value = `${e.value} ед.`; cls = 'alcohol'; }
           else if (e.type === 'device_change') {
             type = 'Смяна устройство';
-            const deviceLabels = { ampule: 'Ампула', sensor: 'Сензор' };
+            const deviceLabels = { ampule: 'Ампула', sensor: 'Сензор', patch: 'Пач', pump_base: 'Основа помпа', settings_change: 'Настройки' };
             value = e.meta && e.meta.device_type ? (deviceLabels[e.meta.device_type] || e.meta.device_type) : '—';
             cls = 'device-change';
           }

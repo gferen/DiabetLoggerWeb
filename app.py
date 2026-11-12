@@ -360,7 +360,7 @@ class EntryIn(BaseModel):
     def _check_value_by_type(self):
         # device_change няма реална числова стойност - 0 е позволено.
         # Всички други типове пазят старото поведение: value е задължителна и > 0.
-        if self.type != "device_change" and self.value <= 0:
+        if self.type not in ("device_change", "ketones") and self.value <= 0:
             raise ValueError("value must be > 0 for this type")
         if self.type != "activity" and self.value >= 100:
             raise ValueError("value must be < 100 for this type")
