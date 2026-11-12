@@ -768,6 +768,8 @@
     </div>
     <div class="row" id="fast-bolus-dur-row" style="display:none">
       <div><label>Продължителност (мин)</label><input type="number" id="fast-bolus-duration" step="5" min="5" max="480" placeholder="напр. 60"></div>
+    </div>
+    <div class="row">
       <div><label>Дата и час на дозата</label><div class="dt-picker"><input type="date" id="fast-date"><input type="number" id="fast-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="fast-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
     </div>
     <div class="row">
@@ -1061,6 +1063,7 @@ function setNowInto(type) {
   document.getElementById(`${type}-date`).value = p.date;
   document.getElementById(`${type}-hour`).value = p.hour;
   document.getElementById(`${type}-min`).value = p.min;
+  dtTouched.delete(type);
 }
 function readDatetime(type) {
   const date = document.getElementById(`${type}-date`).value;
@@ -1143,8 +1146,27 @@ function toast(msg, isError = false) {
   setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+// ============= TIME FIELDS FOLLOW THE CLOCK =============
+// Докато не пипнеш дата/час в дадена форма, те показват „сега“ — и в момента на записа,
+// а не към зареждането на страницата. Пипнатите полета остават както са въведени.
+const DT_FIELDS = ['bg','fast','slow','ketones','activity','alcohol','device_change','hypo','cig','nk'];
+const dtTouched = new Set();
+DT_FIELDS.forEach(p => ['date','hour','min'].forEach(s =>
+  document.getElementById(`${p}-${s}`).addEventListener('input', () => dtTouched.add(p))));
+function syncNowFields(force) {
+  const active = document.activeElement ? document.activeElement.id : '';
+  DT_FIELDS.forEach(p => {
+    if (dtTouched.has(p)) return;
+    if (!force && [`${p}-date`, `${p}-hour`, `${p}-min`].includes(active)) return;
+    setNowInto(p);
+  });
+}
+setInterval(() => syncNowFields(), 20000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) syncNowFields(); });
+
 // ============= ACTIONS =============
 async function addEntry(type) {
+  syncNowFields(true);
   let val;
   if (type === 'device_change') {
     val = 0; // device_change няма реална числова стойност
@@ -1202,6 +1224,7 @@ async function addEntry(type) {
 }
 
 async function addHypo() {
+  syncNowFields(true);
   const g = parseFloat(document.getElementById('hypo-g').value);
   const n = parseInt(document.getElementById('hypo-n').value, 10);
   if (!(g > 0) || !(n > 0)) { toast('Грамове и брой са задължителни', true); return; }
@@ -1215,12 +1238,14 @@ async function addHypo() {
   try {
     await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
     document.getElementById('hypo-notes').value = '';
+    setNowInto('hypo');
     await reload();
     toast(`Записано: ${grams} g (${payload.value} XE)`);
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
 async function addCig() {
+  syncNowFields(true);
   const n = parseInt(document.getElementById('cig-n').value, 10);
   if (!(n > 0)) { toast('Брой е задължителен', true); return; }
   const dt = readDatetime('cig');
@@ -1233,12 +1258,14 @@ async function addCig() {
     await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
     document.getElementById('cig-notes').value = '';
     document.getElementById('cig-n').value = '1';
+    setNowInto('cig');
     await reload();
     toast(`Записано: ${n} цигар${n === 1 ? 'а' : 'и'}`);
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
 async function addNightKit() {
+  syncNowFields(true);
   const fg = parseFloat(document.getElementById('nk-fast-g').value) || 0;
   const sg = parseFloat(document.getElementById('nk-slow-g').value) || 0;
   const total = fg + sg;
@@ -1255,6 +1282,7 @@ async function addNightKit() {
   try {
     await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
     document.getElementById('nk-notes').value = '';
+    setNowInto('nk');
     await reload();
     toast(`Записано: ${total} g (${payload.value} XE)`);
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
