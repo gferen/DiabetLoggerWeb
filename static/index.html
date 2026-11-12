@@ -836,7 +836,7 @@
 
   <div class="tab-content" data-tab="alcohol">
     <div class="row">
-      <div><label>Количество (единици)</label><input type="number" id="alcohol-value" step="0.5" min="0.5" max="20" placeholder="напр. 1"></div>
+      <div><label>Брой напитки (1 = шот / чаша вино / бира 0.5л / шприц)</label><input type="number" id="alcohol-value" step="0.5" min="0.5" max="10" placeholder="напр. 1"></div>
       <div><label>Дата и час</label><div class="dt-picker"><input type="date" id="alcohol-date"><input type="number" id="alcohol-hour" min="0" max="23" class="dt-num" placeholder="ч"><span class="dt-sep">:</span><input type="number" id="alcohol-min" min="0" max="59" class="dt-num" placeholder="м"></div></div>
     </div>
     <div><label>Бележки (опц.)</label><input type="text" id="alcohol-notes" placeholder="напр. 1 бира 0.5л / 1 чаша вино / ..."></div>
@@ -1500,7 +1500,7 @@ function renderChart() {
       scales: {
         x: { type: 'time', time: { tooltipFormat: 'dd.MM HH:mm', displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'dd.MM' } }, ticks: { color: '#8b98a9' }, grid: { color: '#2a3543' } },
         y: { position: 'left', title: { display: true, text: 'mmol/L', color: '#8b98a9' }, ticks: { color: '#8b98a9' }, grid: { color: '#2a3543' }, suggestedMin: 3, suggestedMax: 15 },
-        y1: { position: 'right', title: { display: true, text: 'Инсулин (U)', color: '#8b98a9' }, ticks: { color: '#8b98a9' }, grid: { drawOnChartArea: false }, suggestedMin: 0 }
+        y1: { position: 'right', title: { display: true, text: 'Инсулин (U)', color: '#8b98a9' }, ticks: { color: '#8b98a9' }, grid: { drawOnChartArea: false }, suggestedMin: 0, suggestedMax: 1 }
       }
     }
   });
