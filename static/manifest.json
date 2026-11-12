@@ -1,0 +1,8 @@
+{
+  "name": "Diabet Logger",
+  "short_name": "Logger",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#15171a",
+  "theme_color": "#15171a"
+}
