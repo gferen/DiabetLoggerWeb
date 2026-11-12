@@ -692,7 +692,25 @@
   <input type="number" id="hypo-g" value="3" min="1" max="50" step="1" style="width:70px" title="грама в една доза (напр. таблетка глюкоза)"> g ×
   <input type="number" id="hypo-n" value="5" min="1" max="20" step="1" style="width:60px" title="брой">
   <input type="text" id="hypo-notes" placeholder="бележка (по желание)" style="flex:1;min-width:140px">
-  <button class="btn" onclick="addHypo()">Запиши сега</button>
+  <div class="dt-picker" style="display:flex;align-items:center;gap:4px"><input type="date" id="hypo-date" style="width:130px"><input type="number" id="hypo-hour" min="0" max="23" class="dt-num" placeholder="ч" style="width:50px"><span class="dt-sep">:</span><input type="number" id="hypo-min" min="0" max="59" class="dt-num" placeholder="м" style="width:50px"></div>
+  <button class="btn" onclick="addHypo()">Запиши</button>
+</div>
+
+<div class="panel" id="cig-panel" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px">
+  <span style="font-weight:600">🚬 Цигара:</span>
+  <input type="number" id="cig-n" value="1" min="1" max="10" step="1" style="width:60px" title="брой">
+  <input type="text" id="cig-notes" placeholder="бележка (по желание)" style="flex:1;min-width:140px">
+  <div class="dt-picker" style="display:flex;align-items:center;gap:4px"><input type="date" id="cig-date" style="width:130px"><input type="number" id="cig-hour" min="0" max="23" class="dt-num" placeholder="ч" style="width:50px"><span class="dt-sep">:</span><input type="number" id="cig-min" min="0" max="59" class="dt-num" placeholder="м" style="width:50px"></div>
+  <button class="btn" onclick="addCig()">Запиши</button>
+</div>
+
+<div class="panel" id="nightkit-panel" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 14px">
+  <span style="font-weight:600">🌙 Нощен комплект:</span>
+  <span>Бързи:</span> <input type="number" id="nk-fast-g" value="10" min="1" max="50" step="1" style="width:60px"> g
+  <span>Бавни:</span> <input type="number" id="nk-slow-g" value="0" min="0" max="50" step="1" style="width:60px"> g
+  <input type="text" id="nk-notes" placeholder="бележка (по желание)" style="flex:1;min-width:140px">
+  <div class="dt-picker" style="display:flex;align-items:center;gap:4px"><input type="date" id="nk-date" style="width:130px"><input type="number" id="nk-hour" min="0" max="23" class="dt-num" placeholder="ч" style="width:50px"><span class="dt-sep">:</span><input type="number" id="nk-min" min="0" max="59" class="dt-num" placeholder="м" style="width:50px"></div>
+  <button class="btn" onclick="addNightKit()">Запиши</button>
 </div>
 
 <div class="panel">
@@ -1189,14 +1207,56 @@ async function addHypo() {
   if (!(g > 0) || !(n > 0)) { toast('Грамове и брой са задължителни', true); return; }
   const xeG = parseFloat(document.getElementById('xe-grams-input')?.value) || 12;
   const grams = g * n;
+  const dt = readDatetime('hypo');
+  if (!dt) { toast('Невалидна дата или час', true); return; }
   const extra = document.getElementById('hypo-notes').value.trim();
   const payload = { type: 'meal', value: Math.round(grams / xeG * 100) / 100, carbs_g: grams,
-                    time: new Date().toISOString(), notes: `[ХИПО] ${n}×${g}g` + (extra ? ' — ' + extra : '') };
+                    time: dt.toISOString(), notes: `[ХИПО] ${n}×${g}g` + (extra ? ' — ' + extra : '') };
   try {
     await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
     document.getElementById('hypo-notes').value = '';
     await reload();
     toast(`Записано: ${grams} g (${payload.value} XE)`);
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+async function addCig() {
+  const n = parseInt(document.getElementById('cig-n').value, 10);
+  if (!(n > 0)) { toast('Брой е задължителен', true); return; }
+  const dt = readDatetime('cig');
+  if (!dt) { toast('Невалидна дата или час', true); return; }
+  const extra = document.getElementById('cig-notes').value.trim();
+  const payload = { type: 'activity', value: 5, time: dt.toISOString(),
+                    notes: `[ЦИГАРА] ${n} бр.` + (extra ? ' — ' + extra : ''),
+                    meta: { intensity: 'light' } };
+  try {
+    await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
+    document.getElementById('cig-notes').value = '';
+    document.getElementById('cig-n').value = '1';
+    await reload();
+    toast(`Записано: ${n} цигар${n === 1 ? 'а' : 'и'}`);
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+async function addNightKit() {
+  const fg = parseFloat(document.getElementById('nk-fast-g').value) || 0;
+  const sg = parseFloat(document.getElementById('nk-slow-g').value) || 0;
+  const total = fg + sg;
+  if (total <= 0) { toast('Въведи поне бързи или бавни грамове', true); return; }
+  const xeG = parseFloat(document.getElementById('xe-grams-input')?.value) || 12;
+  const dt = readDatetime('nk');
+  if (!dt) { toast('Невалидна дата или час', true); return; }
+  const extra = document.getElementById('nk-notes').value.trim();
+  const parts = [];
+  if (fg > 0) parts.push(`${fg}g бързи`);
+  if (sg > 0) parts.push(`${sg}g бавни`);
+  const payload = { type: 'meal', value: Math.round(total / xeG * 100) / 100, carbs_g: total,
+                    time: dt.toISOString(), notes: `[ХИПО] Нощен: ${parts.join(' + ')}` + (extra ? ' — ' + extra : '') };
+  try {
+    await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
+    document.getElementById('nk-notes').value = '';
+    await reload();
+    toast(`Записано: ${total} g (${payload.value} XE)`);
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -1842,7 +1902,7 @@ document.getElementById('login-user').addEventListener('keydown', e => { if (e.k
 
 // ============= INIT =============
 (async () => {
-  ['bg','fast','slow','ketones','activity','alcohol','device_change'].forEach(t => setNowInto(t));
+  ['bg','fast','slow','ketones','activity','alcohol','device_change','hypo','cig','nk'].forEach(t => setNowInto(t));
   await checkAuthMode();
   if (authMode === 'login' && !getToken()) {
     showLogin();
