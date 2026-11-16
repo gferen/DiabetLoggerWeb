@@ -529,6 +529,10 @@
   .badge.cig { --c: var(--device); }
   .badge.alcohol { --c: var(--alcohol); }
   .badge.device-change { --c: var(--device); }
+  .badge.period { --c: #e67e22; }
+  .period-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+  .period-bar .quick-btn { border-color: #e67e22; }
+  .period-bar .quick-btn[aria-expanded="true"] { border-color: var(--paper); }
   .badge.dp { --c: var(--paper); }
 
   /* ---------- Settings and data ---------- */
@@ -738,6 +742,31 @@
         <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="susp" role="group" aria-label="Кога"></div></div>
         <div class="field"><label for="susp-notes">Бележка, по желание</label><input type="text" id="susp-notes"></div>
         <div class="actions"><button class="btn" onclick="addSuspend()">Запиши</button></div>
+      </div>
+
+      <div class="period-bar">
+        <button class="quick-btn" data-quick="period" aria-expanded="false" aria-controls="period-panel" onclick="toggleQuick('period')"><span class="ico" aria-hidden="true">🏷️</span>Период</button>
+      </div>
+
+      <div class="quick-panel" id="period-panel" hidden>
+        <div class="row">
+          <div class="field"><label for="period-type">Тип</label>
+            <select id="period-type">
+              <option value="hospital">🏥 Болница</option>
+              <option value="travel">✈️ Пътуване</option>
+              <option value="sick">🤒 Болест</option>
+              <option value="stress">😰 Стрес</option>
+              <option value="exercise">🏃 Активен ден</option>
+              <option value="other">📌 Друго</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="period-start-date">Начало</label><input type="date" id="period-start-date"></div>
+          <div class="field"><label for="period-end-date">Край</label><input type="date" id="period-end-date"></div>
+        </div>
+        <div class="field"><label for="period-notes">Бележка, по желание</label><input type="text" id="period-notes" placeholder="подробности…"></div>
+        <div class="actions"><button class="btn" onclick="addPeriod()">Запиши</button></div>
       </div>
 
       <div class="quick-panel" id="resume-panel" hidden>
@@ -1567,6 +1596,31 @@ async function addNightKit() {
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
+// --- Period tags ---
+async function addPeriod() {
+  const ptype = document.getElementById('period-type').value;
+  const startDate = document.getElementById('period-start-date').value;
+  const endDate = document.getElementById('period-end-date').value;
+  if (!startDate) { toast('Начална дата е задължителна', true); return; }
+  const extra = document.getElementById('period-notes').value.trim();
+  const periodLabels = { hospital: 'Болница', travel: 'Пътуване', sick: 'Болест', stress: 'Стрес', exercise: 'Активен ден', other: 'Друго' };
+  const label = periodLabels[ptype] || ptype;
+  const payload = {
+    type: 'device_change', value: 0,
+    time: new Date(startDate + 'T00:00:00').toISOString(),
+    notes: '[ПЕРИОД] ' + label + (endDate ? ' до ' + endDate : ' (продължава)') + (extra ? ' — ' + extra : ''),
+    meta: { device_type: 'period', period_type: ptype, period_start: startDate, period_end: endDate || null }
+  };
+  try {
+    await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
+    document.getElementById('period-notes').value = '';
+    document.getElementById('period-start-date').value = '';
+    document.getElementById('period-end-date').value = '';
+    await reload();
+    toast('Записано: ' + label + ' от ' + startDate + (endDate ? ' до ' + endDate : ''));
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
 // --- Pump quick actions ---
 async function addTempBasal() {
   syncNowFields(true);
@@ -1877,8 +1931,16 @@ function buildChartData() {
       return { start, end, pct: e.meta.temp_basal_pct };
     })
     .sort((a, b) => a.start - b.start);
+  // Period tags for chart background
+  const periods = ve
+    .filter(e => e.type === 'device_change' && e.meta && e.meta.device_type === 'period')
+    .map(e => ({
+      start: e.meta.period_start ? new Date(e.meta.period_start).getTime() : new Date(e.time).getTime(),
+      end: e.meta.period_end ? new Date(e.meta.period_end + 'T23:59:59').getTime() : Date.now(),
+      type: e.meta.period_type
+    }));
   return { cgm: cgmLine, bg: pick('bg', false), ketones: pick('ketones'), fast: pick('fast'), slow: pick('slow'),
-           meal: meals.filter(m => !m.h), hypo: meals.filter(m => m.h), tempBasal };
+           meal: meals.filter(m => !m.h), hypo: meals.filter(m => m.h), tempBasal, periods };
 }
 
 // Цветовете на графиката идват от същите CSS променливи като останалата страница.
@@ -1931,6 +1993,35 @@ const targetBand = {
 
 // Temp-basal ленти зад кривата: оранжево за >100%, синьо за <100%, червено за 0% (спиране).
 let _tempBasalData = [];
+let _periodData = [];
+const periodBands = {
+  id: 'periodBands',
+  beforeDatasetsDraw(c) {
+    const area = c.chartArea, x = c.scales.x;
+    if (!area || !x || !_periodData.length) return;
+    const ctx = c.ctx;
+    ctx.save();
+    const colors = { hospital: 'rgba(231,76,60,0.06)', travel: 'rgba(52,152,219,0.06)', sick: 'rgba(241,196,15,0.06)', stress: 'rgba(155,89,182,0.06)', exercise: 'rgba(46,204,113,0.06)', other: 'rgba(149,165,166,0.06)' };
+    const icons = { hospital: '🏥', travel: '✈️', sick: '🤒', stress: '😰', exercise: '🏃', other: '📌' };
+    for (const p of _periodData) {
+      const x0 = Math.max(area.left, x.getPixelForValue(p.start));
+      const x1 = Math.min(area.right, x.getPixelForValue(p.end));
+      if (x1 <= x0) continue;
+      ctx.fillStyle = colors[p.type] || colors.other;
+      ctx.fillRect(x0, area.top, x1 - x0, area.bottom - area.top);
+      // top border
+      ctx.strokeStyle = (colors[p.type] || colors.other).replace('0.06', '0.3');
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x0, area.top); ctx.lineTo(x1, area.top); ctx.stroke();
+      // icon label
+      ctx.font = '12px ' + (palette().font || 'sans-serif');
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.textAlign = 'left';
+      ctx.fillText(icons[p.type] || '📌', x0 + 4, area.bottom - 6);
+    }
+    ctx.restore();
+  }
+};
 const tempBasalBands = {
   id: 'tempBasalBands',
   beforeDatasetsDraw(c) {
@@ -1966,6 +2057,7 @@ function renderChart() {
   }
   const d = buildChartData();
   _tempBasalData = d.tempBasal || [];
+  _periodData = d.periods || [];
   const forceNew = chartReset;
   chartReset = false;
   // Update in place when possible, so zoom/pan survive the auto-refresh.
@@ -1990,7 +2082,7 @@ function renderChart() {
   Chart.defaults.color = P.ash;
   chart = new Chart(document.getElementById('chart').getContext('2d'), {
     type: 'line',
-    plugins: [targetBand, tempBasalBands],
+    plugins: [targetBand, tempBasalBands, periodBands],
     data: {
       datasets: [
         { label: 'CGM (mmol/L)', data: d.cgm, borderColor: P.ok, backgroundColor: 'transparent', borderWidth: 1.75, pointRadius: 0, pointHoverRadius: 3, tension: 0.2, spanGaps: false, yAxisID: 'y',
@@ -2111,6 +2203,16 @@ function renderHistory() {
         patchParts.push(e.meta.temp_basal_pct + '% / ' + (e.meta.temp_basal_min || '?') + ' мин');
       }
       if (e.meta && e.meta.resume) patchParts.push('възобновен');
+      // Period tags
+      if (e.meta && e.meta.device_type === 'period') {
+        const periodLabels = { hospital: '🏥 Болница', travel: '✈️ Пътуване', sick: '🤒 Болест', stress: '😰 Стрес', exercise: '🏃 Активен ден', other: '📌 Друго' };
+        patchParts.length = 0; // clear device label
+        const pLabel = periodLabels[e.meta.period_type] || e.meta.period_type;
+        patchParts.push(pLabel);
+        if (e.meta.period_start) patchParts.push(e.meta.period_start);
+        if (e.meta.period_end) patchParts.push('→ ' + e.meta.period_end);
+        else patchParts.push('(продължава)');
+      }
       value = dtLabel + (patchParts.length ? ' · ' + patchParts.join(', ') : '');
       cls = 'device-change';
     }
@@ -2465,6 +2567,12 @@ document.getElementById('login-user').addEventListener('keydown', e => { if (e.k
 // ============= INIT =============
 (async () => {
   buildPickers();
+  // Default period dates to today
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const psd = document.getElementById('period-start-date');
+  const ped = document.getElementById('period-end-date');
+  if (psd && !psd.value) psd.value = todayStr;
+  if (ped && !ped.value) ped.value = todayStr;
   syncNowFields();
   updateQuickTotals();
   if (DEMO) document.getElementById('demo-banner').hidden = false;
