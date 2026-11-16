@@ -719,6 +719,94 @@ reimported_activity = next(e for e in reimported if e['type'] == 'activity')
 check("Round-trip: meta оцелява", reimported_activity.get('meta') == {'intensity':'moderate'})
 
 
+# ========== PROFILES CRUD ==========
+section("Profiles API")
+
+# Clean any existing profiles
+existing = client.get('/api/profiles', headers=H).json()
+for p in existing:
+    client.delete(f'/api/profiles/{p["id"]}', headers=H)
+
+# Create
+r = client.post('/api/profiles', json={
+    'name': 'Test Standard', 'active_from': '2026-11-01',
+    'basal': [0.5]*24, 'isf': [{'from':'00:00','value':3.0}],
+    'cr': [{'from':'00:00','value':12}], 'notes': 'QA test'
+}, headers=H)
+check("profiles POST → 200", r.status_code == 200, f"got {r.status_code}")
+pid1 = r.json()['id']
+
+r = client.post('/api/profiles', json={
+    'name': 'Test v2', 'active_from': '2026-11-10',
+    'basal': [0.6]*24, 'isf': [{'from':'00:00','value':4.0},{'from':'08:00','value':3.0}],
+    'cr': [{'from':'00:00','value':12}], 'notes': ''
+}, headers=H)
+check("profiles POST #2 → 200", r.status_code == 200)
+pid2 = r.json()['id']
+
+# Validation: basal must have 24 values
+r = client.post('/api/profiles', json={
+    'name': 'Bad', 'active_from': '2026-11-01',
+    'basal': [0.5]*10, 'isf': [], 'cr': []
+}, headers=H)
+check("profiles: basal != 24 → 400", r.status_code == 400, f"got {r.status_code}")
+
+# Validation: name required
+r = client.post('/api/profiles', json={
+    'name': '', 'active_from': '2026-11-01',
+    'basal': [0.5]*24, 'isf': [], 'cr': []
+}, headers=H)
+check("profiles: empty name → 422", r.status_code == 422, f"got {r.status_code}")
+
+# List
+r = client.get('/api/profiles', headers=H)
+check("profiles GET list → 200", r.status_code == 200)
+profiles = r.json()
+check("profiles: 2 записа", len(profiles) == 2, f"got {len(profiles)}")
+check("profiles: сортирани по active_from desc", profiles[0]['active_from'] >= profiles[1]['active_from'])
+
+# Active
+r = client.get('/api/profiles/active', headers=H)
+check("profiles/active → 200", r.status_code == 200)
+active = r.json()['active']
+check("profiles/active: последният по дата", active['name'] == 'Test v2')
+check("profiles/active: basal е list с 24", len(active['basal']) == 24)
+check("profiles/active: isf е list", isinstance(active['isf'], list) and len(active['isf']) == 2)
+
+# Update
+r = client.put(f'/api/profiles/{pid1}', json={
+    'name': 'Test Standard (updated)', 'active_from': '2026-11-01',
+    'basal': [0.55]*24, 'isf': [{'from':'00:00','value':3.1}],
+    'cr': [{'from':'00:00','value':10}], 'notes': 'updated'
+}, headers=H)
+check("profiles PUT → 200", r.status_code == 200)
+check("profiles PUT: name updated", r.json()['name'] == 'Test Standard (updated)')
+
+# Verify update persisted
+r = client.get('/api/profiles', headers=H)
+updated = next(p for p in r.json() if p['id'] == pid1)
+check("profiles: update persisted", updated['notes'] == 'updated')
+check("profiles: basal updated", updated['basal'][0] == 0.55)
+
+# Update non-existent
+r = client.put('/api/profiles/99999', json={
+    'name': 'Ghost', 'active_from': '2026-01-01',
+    'basal': [0.5]*24, 'isf': [], 'cr': []
+}, headers=H)
+check("profiles PUT 404", r.status_code == 404, f"got {r.status_code}")
+
+# Delete
+r = client.delete(f'/api/profiles/{pid1}', headers=H)
+check("profiles DELETE → 200", r.status_code == 200)
+r = client.delete(f'/api/profiles/{pid1}', headers=H)
+check("profiles DELETE 404 (вече изтрит)", r.status_code == 404, f"got {r.status_code}")
+
+# Cleanup
+client.delete(f'/api/profiles/{pid2}', headers=H)
+r = client.get('/api/profiles', headers=H)
+check("profiles: cleanup OK (0 записа)", len(r.json()) == 0, f"got {len(r.json())}")
+
+
 # ========== FINAL REPORT ==========
 print("\n" + "="*60)
 print(f"РЕЗУЛТАТ: {PASSED} passed, {FAILED} failed")
