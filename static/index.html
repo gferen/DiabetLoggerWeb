@@ -1828,8 +1828,21 @@ function buildChartData() {
   const meals = ve.filter(e => e.type === 'meal' && new Date(e.time).getTime() >= cutoff)
     .map(e => ({ x: new Date(e.time).getTime(), y: e.value, n: e.notes || '', h: (e.notes || '').startsWith('[ХИПО]') }))
     .sort((a, b) => a.x - b.x);
+  // Temp basal periods: extract from device_change entries with temp_basal_pct in meta
+  const tempBasal = ve
+    .filter(e => e.type === 'device_change' && e.meta && e.meta.temp_basal_pct !== undefined && new Date(e.time).getTime() >= cutoff)
+    .map(e => {
+      const start = new Date(e.time).getTime();
+      const dur = (e.meta.temp_basal_min || 60) * 60 * 1000;
+      // Check if there's a resume entry before the natural end
+      const resumeEntry = ve.find(r => r.type === 'device_change' && r.meta && r.meta.resume
+        && new Date(r.time).getTime() > start && new Date(r.time).getTime() < start + dur);
+      const end = resumeEntry ? new Date(resumeEntry.time).getTime() : start + dur;
+      return { start, end, pct: e.meta.temp_basal_pct };
+    })
+    .sort((a, b) => a.start - b.start);
   return { cgm: cgmLine, bg: pick('bg', false), ketones: pick('ketones'), fast: pick('fast'), slow: pick('slow'),
-           meal: meals.filter(m => !m.h), hypo: meals.filter(m => m.h) };
+           meal: meals.filter(m => !m.h), hypo: meals.filter(m => m.h), tempBasal };
 }
 
 // Цветовете на графиката идват от същите CSS променливи като останалата страница.
@@ -1880,12 +1893,43 @@ const targetBand = {
   }
 };
 
+// Temp-basal ленти зад кривата: оранжево за >100%, синьо за <100%, червено за 0% (спиране).
+let _tempBasalData = [];
+const tempBasalBands = {
+  id: 'tempBasalBands',
+  beforeDatasetsDraw(c) {
+    const area = c.chartArea, x = c.scales.x;
+    if (!area || !x || !_tempBasalData.length) return;
+    const ctx = c.ctx;
+    ctx.save();
+    for (const tb of _tempBasalData) {
+      const x0 = Math.max(area.left, x.getPixelForValue(tb.start));
+      const x1 = Math.min(area.right, x.getPixelForValue(tb.end));
+      if (x1 <= x0) continue;
+      let color;
+      if (tb.pct === 0) color = 'rgba(255, 90, 95, 0.15)';       // червено — спиране
+      else if (tb.pct < 100) color = 'rgba(100, 160, 255, 0.12)'; // синьо — намален
+      else if (tb.pct > 100) color = 'rgba(255, 180, 50, 0.15)';  // оранжево — повишен
+      else continue; // 100% = нормален, не рисуваме
+      ctx.fillStyle = color;
+      ctx.fillRect(x0, area.top, x1 - x0, area.bottom - area.top);
+      // етикет горе
+      ctx.fillStyle = color.replace(/[\d.]+\)$/, '0.6)');
+      ctx.font = '10px ' + (palette().font || 'sans-serif');
+      ctx.textAlign = 'center';
+      ctx.fillText(tb.pct + '%', (x0 + x1) / 2, area.top + 12);
+    }
+    ctx.restore();
+  }
+};
+
 function renderChart() {
   if (typeof Chart === 'undefined') {   // библиотеката идва от CDN; без нея останалата страница продължава да работи
     document.querySelector('.chart-wrap').innerHTML = '<div class="empty">Графиката не се зареди, защото няма връзка с cdn.jsdelivr.net.</div>';
     return;
   }
   const d = buildChartData();
+  _tempBasalData = d.tempBasal || [];
   const forceNew = chartReset;
   chartReset = false;
   // Update in place when possible, so zoom/pan survive the auto-refresh.
@@ -1910,7 +1954,7 @@ function renderChart() {
   Chart.defaults.color = P.ash;
   chart = new Chart(document.getElementById('chart').getContext('2d'), {
     type: 'line',
-    plugins: [targetBand],
+    plugins: [targetBand, tempBasalBands],
     data: {
       datasets: [
         { label: 'CGM (mmol/L)', data: d.cgm, borderColor: P.ok, backgroundColor: 'transparent', borderWidth: 1.75, pointRadius: 0, pointHoverRadius: 3, tension: 0.2, spanGaps: false, yAxisID: 'y',
