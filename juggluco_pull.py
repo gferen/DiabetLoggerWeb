@@ -154,10 +154,28 @@ def fetch_entries(count: int):
     return _get_json(url)
 
 
-def fetch_mbg(count: int):
-    """Fetch meter blood glucose (finger-prick) readings from Juggluco."""
-    url = f"{BASE_URL}/mbg.json?count={count}"
-    return _get_json(url)
+def fetch_mbg(days: int = 7):
+    """Fetch meter blood glucose (finger-prick) readings from Juggluco's /x/amounts endpoint.
+    Returns list of dicts with 'date' (ms epoch) and 'mbg' (mmol/L) keys."""
+    url = f"{BASE_URL}/x/amounts?days={days}"
+    req = Request(url)
+    with urlopen(req, timeout=30) as resp:
+        raw = resp.read().decode("utf-8")
+    results = []
+    for line in raw.strip().splitlines():
+        parts = line.split("\t")
+        if len(parts) < 7:
+            continue
+        label = parts[6].strip()
+        if label.lower() not in ("blood", "bloed", "blut", "glucose", "bg"):
+            continue
+        try:
+            epoch_sec = int(parts[2])
+            value_mmol = float(parts[5])
+            results.append({"date": epoch_sec * 1000, "mbg": value_mmol, "label": label})
+        except (ValueError, IndexError):
+            continue
+    return results
 
 
 def post_mbg_entry(entry: dict) -> bool:
@@ -165,7 +183,7 @@ def post_mbg_entry(entry: dict) -> bool:
     ts_iso = datetime.fromtimestamp(entry["date"] / 1000, tz=timezone.utc).isoformat()
     payload = {
         "type": "bg",
-        "value": mmol(entry.get("mbg", entry.get("sgv", 0))),
+        "value": entry.get("mbg", 0),  # already mmol/L from /x/amounts
         "time": ts_iso,
         "notes": "[Глюкомер-BT]",
         "meta": {"source": "own"},
@@ -278,9 +296,9 @@ def main():
     mbg_cutoff = load_mbg_watermark()
     if mbg_cutoff == 0:
         mbg_cutoff = int(time.time() * 1000) - 24 * 3600 * 1000
-    mbg_count = min(1000, max(1, int(span_hours * 4)))  # ~4 readings per hour max
+    mbg_days = max(1, int(span_hours / 24) + 1)
     try:
-        mbg_data = fetch_mbg(mbg_count)
+        mbg_data = fetch_mbg(mbg_days)
     except Exception as e:
         print(f"[warn] mbg fetch failed (not fatal): {e}", file=sys.stderr)
         mbg_data = []
