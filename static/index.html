@@ -641,7 +641,7 @@
     <input type="text" id="login-user" autocomplete="username">
     <label for="login-pass">Парола</label>
     <input type="password" id="login-pass" autocomplete="current-password">
-    <button class="btn" onclick="doLogin()">Вход</button>
+    <button class="btn" onclick="doLogin()" data-i18n="login">Вход</button>
     <div class="login-error" id="login-error" role="alert"></div>
   </div>
 </div>
@@ -653,12 +653,14 @@
     <a class="brand" href="#now">🩸 Diabet Logger</a>
     <span class="status" id="status"><span class="dot"></span><span id="status-text">свързване...</span></span>
   </div>
-  <button class="btn secondary small" id="cgm-sync-btn" onclick="syncCgm()" title="Дърпа новите CGM показания от телефона и обновява записите">Обнови</button>
+  <button class="btn secondary small" id="cgm-sync-btn" onclick="syncCgm()" title="Дърпа новите CGM показания от телефона и обновява записите" data-i18n="refresh">Обнови</button>
   <nav class="top-links" aria-label="Други страници">
-    <a href="/meal" target="_blank" rel="noopener" title="Хранене с XE калкулатор (в нов таб)">Хранене</a>
-    <a href="/report" target="_blank" rel="noopener" title="Отчет за лекар (в нов таб)">Отчет за лекар</a>
-    <a href="/print-review" target="_blank" rel="noopener" title="Разпечатка за диетолог (в нов таб)">За диетолог</a>
-    <a href="/static/profiles.html" target="_blank" rel="noopener" title="Профили на помпата (базал, ISF, CR)">Профили</a>
+    <a href="/meal" target="_blank" rel="noopener" title="Хранене с XE калкулатор (в нов таб)" data-i18n="nav_meal">Хранене</a>
+    <a href="/report" target="_blank" rel="noopener" title="Отчет за лекар (в нов таб)" data-i18n="nav_report">Отчет за лекар</a>
+    <a href="/print-review" target="_blank" rel="noopener" title="Разпечатка за диетолог (в нов таб)" data-i18n="nav_print">За диетолог</a>
+    <script src="/static/i18n.js" defer></script>
+    <a href="/static/profiles.html" target="_blank" rel="noopener" title="Профили на помпата (базал, ISF, CR)" data-i18n="nav_profiles">Профили</a>
+    <select id="lang-select" style="background:var(--ink);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--paper);padding:4px 8px;cursor:pointer;font-size:13px;width:160px" title="Change language"></select>
   </nav>
 </header>
 
@@ -674,143 +676,143 @@
 
     <section class="quick" aria-label="Бързи записи">
       <div class="quick-bar">
-        <button class="quick-btn" data-quick="hypo" aria-expanded="false" aria-controls="hypo-panel" onclick="toggleQuick('hypo')"><span class="ico" aria-hidden="true">🍬</span>Ниска</button>
-        <button class="quick-btn" data-quick="cig" aria-expanded="false" aria-controls="cig-panel" onclick="toggleQuick('cig')"><span class="ico" aria-hidden="true">🚬</span>Цигара</button>
-        <button class="quick-btn" data-quick="nk" aria-expanded="false" aria-controls="nightkit-panel" onclick="toggleQuick('nk')"><span class="ico" aria-hidden="true">🌙</span>Нощен комплект</button>
+        <button class="quick-btn" data-quick="hypo" aria-expanded="false" aria-controls="hypo-panel" onclick="toggleQuick('hypo')"><span class="ico" aria-hidden="true">🍬</span><span data-i18n="quick_hypo">Ниска</span></button>
+        <button class="quick-btn" data-quick="cig" aria-expanded="false" aria-controls="cig-panel" onclick="toggleQuick('cig')"><span class="ico" aria-hidden="true">🚬</span><span data-i18n="quick_cig">Цигара</span></button>
+        <button class="quick-btn" data-quick="nk" aria-expanded="false" aria-controls="nightkit-panel" onclick="toggleQuick('nk')"><span class="ico" aria-hidden="true">🌙</span><span data-i18n="quick_night">Нощен комплект</span></button>
       </div>
 
       <div class="quick-panel" id="hypo-panel" hidden>
         <div class="row">
-          <div class="field"><label for="hypo-g">Грамове в една доза</label><input type="number" id="hypo-g" value="3" min="1" max="50" step="1" inputmode="decimal" title="грама в една доза (напр. таблетка глюкоза)"></div>
-          <div class="field"><label for="hypo-n">Брой дози</label><input type="number" id="hypo-n" value="5" min="1" max="20" step="1" inputmode="numeric"></div>
+          <div class="field"><label for="hypo-g" data-i18n="quick_dose_note">Грамове в една доза</label><input type="number" id="hypo-g" value="3" min="1" max="50" step="1" inputmode="decimal" title="грама в една доза (напр. таблетка глюкоза)"></div>
+          <div class="field"><label for="hypo-n" data-i18n="stats_doses">Брой дози</label><input type="number" id="hypo-n" value="5" min="1" max="20" step="1" inputmode="numeric"></div>
         </div>
         <p class="quick-total" id="hypo-total" aria-live="polite"></p>
-        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="hypo" role="group" aria-label="Кога"></div></div>
-        <div class="field"><label for="hypo-notes">Бележка, по желание</label><input type="text" id="hypo-notes" placeholder="кола, глюкозни таблетки…"></div>
-        <div class="actions"><button class="btn" onclick="addHypo()">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="hypo" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="hypo-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="hypo-notes" placeholder="кола, глюкозни таблетки…"></div>
+        <div class="actions"><button class="btn" onclick="addHypo()" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="quick-panel" id="cig-panel" hidden>
         <div class="row">
-          <div class="field"><label for="cig-n">Брой</label><input type="number" id="cig-n" value="1" min="1" max="10" step="1" inputmode="numeric"></div>
+          <div class="field"><label for="cig-n" data-i18n="stats_doses">Брой</label><input type="number" id="cig-n" value="1" min="1" max="10" step="1" inputmode="numeric"></div>
         </div>
-        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="cig" role="group" aria-label="Кога"></div></div>
-        <div class="field"><label for="cig-notes">Бележка, по желание</label><input type="text" id="cig-notes"></div>
-        <div class="actions"><button class="btn" onclick="addCig()">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="cig" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="cig-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="cig-notes"></div>
+        <div class="actions"><button class="btn" onclick="addCig()" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="quick-panel" id="nightkit-panel" hidden>
         <div class="row">
-          <div class="field"><label for="nk-fast-g">Бързи въглехидрати, g</label><input type="number" id="nk-fast-g" value="10" min="0" max="50" step="1" inputmode="decimal"></div>
-          <div class="field"><label for="nk-slow-g">Бавни въглехидрати, g</label><input type="number" id="nk-slow-g" value="0" min="0" max="50" step="1" inputmode="decimal"></div>
+          <div class="field"><label for="nk-fast-g" data-i18n="quick_fast_carbs">Бързи въглехидрати, g</label><input type="number" id="nk-fast-g" value="10" min="0" max="50" step="1" inputmode="decimal"></div>
+          <div class="field"><label for="nk-slow-g" data-i18n="quick_slow_carbs">Бавни въглехидрати, g</label><input type="number" id="nk-slow-g" value="0" min="0" max="50" step="1" inputmode="decimal"></div>
         </div>
         <p class="quick-total" id="nk-total" aria-live="polite"></p>
-        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="nk" role="group" aria-label="Кога"></div></div>
-        <div class="field"><label for="nk-notes">Бележка, по желание</label><input type="text" id="nk-notes"></div>
-        <div class="actions"><button class="btn" onclick="addNightKit()">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="nk" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="nk-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="nk-notes"></div>
+        <div class="actions"><button class="btn" onclick="addNightKit()" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="pump-bar">
-        <button class="quick-btn" data-quick="tb" aria-expanded="false" aria-controls="tb-panel" onclick="toggleQuick('tb')"><span class="ico" aria-hidden="true">⚡</span>Темп базал</button>
-        <button class="quick-btn" data-quick="qb" aria-expanded="false" aria-controls="qb-panel" onclick="toggleQuick('qb')"><span class="ico" aria-hidden="true">💉</span>Болус</button>
-        <button class="quick-btn" data-quick="susp" aria-expanded="false" aria-controls="susp-panel" onclick="toggleQuick('susp')"><span class="ico" aria-hidden="true">⏸️</span>Спиране</button>
-        <button class="quick-btn" data-quick="resume" aria-expanded="false" aria-controls="resume-panel" onclick="toggleQuick('resume')"><span class="ico" aria-hidden="true">🔄</span>Възобнови</button>
+        <button class="quick-btn" data-quick="tb" aria-expanded="false" aria-controls="tb-panel" onclick="toggleQuick('tb')"><span class="ico" aria-hidden="true">⚡</span><span data-i18n="pump_temp_basal">Темп базал</span></button>
+        <button class="quick-btn" data-quick="qb" aria-expanded="false" aria-controls="qb-panel" onclick="toggleQuick('qb')"><span class="ico" aria-hidden="true">💉</span><span data-i18n="pump_bolus">Болус</span></button>
+        <button class="quick-btn" data-quick="susp" aria-expanded="false" aria-controls="susp-panel" onclick="toggleQuick('susp')"><span class="ico" aria-hidden="true">⏸️</span><span data-i18n="pump_suspend">Спиране</span></button>
+        <button class="quick-btn" data-quick="resume" aria-expanded="false" aria-controls="resume-panel" onclick="toggleQuick('resume')"><span class="ico" aria-hidden="true">🔄</span><span data-i18n="pump_resume">Възобнови</span></button>
       </div>
 
       <div class="quick-panel" id="tb-panel" hidden>
         <div class="row">
-          <div class="field"><label for="tb-pct">Процент (%)</label><input type="number" id="tb-pct" value="150" min="0" max="300" step="10" inputmode="numeric"></div>
-          <div class="field"><label for="tb-dur">Продължителност (мин)</label><input type="number" id="tb-dur" value="60" min="15" max="480" step="15" inputmode="numeric"></div>
+          <div class="field"><label for="tb-pct" data-i18n="pump_pct">Процент (%)</label><input type="number" id="tb-pct" value="150" min="0" max="300" step="10" inputmode="numeric"></div>
+          <div class="field"><label for="tb-dur" data-i18n="pump_duration">Продължителност (мін)</label><input type="number" id="tb-dur" value="60" min="15" max="480" step="15" inputmode="numeric"></div>
         </div>
-        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="tb" role="group" aria-label="Кога"></div></div>
-        <div class="field"><label for="tb-notes">Бележка, по желание</label><input type="text" id="tb-notes" placeholder="причина за темп базал…"></div>
-        <div class="actions"><button class="btn" onclick="addTempBasal()">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="tb" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="tb-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="tb-notes" placeholder="причина за темп базал…"></div>
+        <div class="actions"><button class="btn" onclick="addTempBasal()" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="quick-panel" id="qb-panel" hidden>
         <div class="row">
-          <div class="field"><label for="qb-units">Единици (U)</label><input type="number" id="qb-units" value="" min="0.1" max="20" step="0.1" inputmode="decimal"></div>
+          <div class="field"><label for="qb-units" data-i18n="pump_units">Единици (U)</label><input type="number" id="qb-units" value="" min="0.1" max="20" step="0.1" inputmode="decimal"></div>
         </div>
-        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="qb" role="group" aria-label="Кога"></div></div>
-        <div class="field"><label for="qb-notes">Бележка, по желание</label><input type="text" id="qb-notes" placeholder="корекция, override…"></div>
-        <div class="actions"><button class="btn" onclick="addQuickBolus()">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="qb" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="qb-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="qb-notes" placeholder="корекция, override…"></div>
+        <div class="actions"><button class="btn" onclick="addQuickBolus()" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="quick-panel" id="susp-panel" hidden>
         <div class="row">
           <div class="field"><label for="susp-dur">Продължителност (мин)</label><input type="number" id="susp-dur" value="30" min="5" max="480" step="5" inputmode="numeric"></div>
         </div>
-        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="susp" role="group" aria-label="Кога"></div></div>
-        <div class="field"><label for="susp-notes">Бележка, по желание</label><input type="text" id="susp-notes"></div>
-        <div class="actions"><button class="btn" onclick="addSuspend()">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="susp" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="susp-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="susp-notes"></div>
+        <div class="actions"><button class="btn" onclick="addSuspend()" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="period-bar">
-        <button class="quick-btn" data-quick="period" aria-expanded="false" aria-controls="period-panel" onclick="toggleQuick('period')"><span class="ico" aria-hidden="true">🏷️</span>Период</button>
+        <button class="quick-btn" data-quick="period" aria-expanded="false" aria-controls="period-panel" onclick="toggleQuick('period')"><span class="ico" aria-hidden="true">🏷️</span><span data-i18n="period_tag">Период</span></button>
       </div>
 
       <div class="quick-panel" id="period-panel" hidden>
         <div class="row">
           <div class="field"><label for="period-type">Тип</label>
             <select id="period-type">
-              <option value="hospital">🏥 Болница</option>
-              <option value="travel">✈️ Пътуване</option>
-              <option value="sick">🤒 Болест</option>
-              <option value="stress">😰 Стрес</option>
-              <option value="exercise">🏃 Активен ден</option>
-              <option value="other">📌 Друго</option>
+              <option value="hospital" data-i18n="period_hospital">🏥 Болница</option>
+              <option value="travel" data-i18n="period_travel">✈️ Пътуване</option>
+              <option value="sick" data-i18n="period_sick">🤒 Болест</option>
+              <option value="stress" data-i18n="period_stress">😰 Стрес</option>
+              <option value="exercise" data-i18n="period_exercise">🏃 Активен ден</option>
+              <option value="other" data-i18n="period_other">📌 Друго</option>
             </select>
           </div>
         </div>
         <div class="row">
-          <div class="field"><label for="period-start-date">Начало</label><input type="date" id="period-start-date"></div>
-          <div class="field"><label for="period-end-date">Край</label><input type="date" id="period-end-date"></div>
+          <div class="field"><label for="period-start-date" data-i18n="period_start">Начало</label><input type="date" id="period-start-date"></div>
+          <div class="field"><label for="period-end-date" data-i18n="period_end">Край</label><input type="date" id="period-end-date"></div>
         </div>
-        <div class="field"><label for="period-notes">Бележка, по желание</label><input type="text" id="period-notes" placeholder="подробности…"></div>
-        <div class="actions"><button class="btn" onclick="addPeriod()">Запиши</button></div>
+        <div class="field"><label for="period-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="period-notes" placeholder="подробности…"></div>
+        <div class="actions"><button class="btn" onclick="addPeriod()" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="quick-panel" id="resume-panel" hidden>
-        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="resume" role="group" aria-label="Кога"></div></div>
-        <div class="field"><label for="resume-notes">Бележка, по желание</label><input type="text" id="resume-notes"></div>
-        <div class="actions"><button class="btn" onclick="addResume()">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="resume" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="resume-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="resume-notes"></div>
+        <div class="actions"><button class="btn" onclick="addResume()" data-i18n="save">Запиши</button></div>
       </div>
     </section>
 
     <section class="tool" id="entry">
-      <h2>Нов запис</h2>
+      <h2 data-i18n="new_entry">Нов запис</h2>
 
       <div class="types" role="group" aria-label="Тип запис">
-        <button class="type-chip active" aria-pressed="true" data-type="bg" style="--c:var(--ok)">Захар</button>
-        <button class="type-chip" aria-pressed="false" data-type="fast" style="--c:var(--fast)" title="Бърз инсулин">Бърз</button>
-        <button class="type-chip" aria-pressed="false" data-type="slow" style="--c:var(--slow)" title="Бавен инсулин">Бавен</button>
-        <button class="type-chip" aria-pressed="false" data-type="ketones" style="--c:var(--ketones)">Кетони</button>
-        <button class="type-chip" aria-pressed="false" data-type="activity" style="--c:var(--activity)">Активност</button>
-        <button class="type-chip" aria-pressed="false" data-type="alcohol" style="--c:var(--alcohol)">Алкохол</button>
-        <button class="type-chip" aria-pressed="false" data-type="device_change" style="--c:var(--device)">Устройство</button>
-        <a class="type-chip link" href="/meal" target="_blank" rel="noopener" style="--c:var(--meal)" title="Хранене с XE калкулатор, отваря се в нов таб">Хранене</a>
+        <button class="type-chip active" aria-pressed="true" data-type="bg" style="--c:var(--ok)" data-i18n="type_bg">Захар</button>
+        <button class="type-chip" aria-pressed="false" data-type="fast" style="--c:var(--fast)" title="Бърз инсулин" data-i18n="type_fast">Бърз</button>
+        <button class="type-chip" aria-pressed="false" data-type="slow" style="--c:var(--slow)" title="Бавен инсулин" data-i18n="type_slow">Бавен</button>
+        <button class="type-chip" aria-pressed="false" data-type="ketones" style="--c:var(--ketones)" data-i18n="type_ketones">Кетони</button>
+        <button class="type-chip" aria-pressed="false" data-type="activity" style="--c:var(--activity)" data-i18n="type_activity">Активност</button>
+        <button class="type-chip" aria-pressed="false" data-type="alcohol" style="--c:var(--alcohol)" data-i18n="type_alcohol">Алкохол</button>
+        <button class="type-chip" aria-pressed="false" data-type="device_change" style="--c:var(--device)" data-i18n="type_device">Устройство</button>
+        <a class="type-chip link" href="/meal" target="_blank" rel="noopener" style="--c:var(--meal)" title="Хранене с XE калкулатор, отваря се в нов таб" data-i18n="type_meal">Хранене</a>
       </div>
 
       <div class="tab-content active" data-tab="bg">
         <div class="row">
           <div class="field field-value"><label for="bg-value">Кръвна захар, mmol/L</label><input type="number" id="bg-value" step="0.1" min="1" max="30" placeholder="7.2" inputmode="decimal"></div>
-          <div class="field"><label for="bg-source">Източник</label>
+          <div class="field"><label for="bg-source" data-i18n="bg_source">Източник</label>
             <select id="bg-source">
-              <option value="own">Мой глюкомер</option><option value="hospital">Болничен</option><option value="cgm_manual">CGM (ръчно)</option>
+              <option value="own" data-i18n="bg_source_own">Мой глюкомер</option><option value="hospital" data-i18n="bg_source_hospital">Болничен</option><option value="cgm_manual">CGM (ръчно)</option>
             </select>
           </div>
         </div>
-        <div class="field"><span class="label">Дата и час</span><div class="dt-picker" data-dt="bg" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="bg-notes">Бележка, по желание</label><input type="text" id="bg-notes" placeholder="преди закуска, след храна…"></div>
-        <div class="actions"><button class="btn" onclick="addEntry('bg')">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="bg" role="group" aria-label="Дата и час"></div></div>
+        <div class="field"><label for="bg-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="bg-notes" placeholder="преди закуска, след храна…"></div>
+        <div class="actions"><button class="btn" onclick="addEntry('bg')" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="tab-content" data-tab="fast">
         <div class="row">
           <div class="field field-value"><label for="fast-value">Единици</label><input type="number" id="fast-value" step="0.05" min="0" max="50" placeholder="8" inputmode="decimal"></div>
-          <div class="field"><label for="fast-bolus-kind">Вид болус</label>
+          <div class="field"><label for="fast-bolus-kind" data-i18n="bolus_kind">Вид болус</label>
             <select id="fast-bolus-kind" onchange="document.getElementById('fast-bolus-dur-row').hidden = this.value === 'normal'">
-              <option value="normal">Нормален</option><option value="extended">Удължен</option><option value="combo">Комбо</option>
+              <option value="normal" data-i18n="bolus_normal">Нормален</option><option value="extended" data-i18n="bolus_extended">Удължен</option><option value="combo" data-i18n="bolus_combo">Комбо</option>
             </select>
           </div>
         </div>
@@ -827,19 +829,19 @@
           <div class="field"><span class="label">Начало на хранене</span><div class="dt-picker" data-dt="fast-meal" role="group" aria-label="Начало на хранене"></div></div>
         </div>
         <div class="row">
-          <div class="field"><label for="fast-delivery">Доставка</label>
+          <div class="field"><label for="fast-delivery" data-i18n="delivery">Доставка</label>
             <select id="fast-delivery">
-              <option value="pump">Помпа</option><option value="pen">Писалка</option><option value="iv">Венозно</option>
+              <option value="pump" data-i18n="delivery_pump">Помпа</option><option value="pen" data-i18n="delivery_pen">Писалка</option><option value="iv" data-i18n="delivery_iv">Венозно</option>
             </select>
           </div>
-          <div class="field"><label for="fast-insulin-type">Вид инсулин</label>
+          <div class="field"><label for="fast-insulin-type" data-i18n="insulin_type">Вид инсулин</label>
             <select id="fast-insulin-type">
               <option value="fiasp">Fiasp</option><option value="novorapid">NovoRapid</option><option value="other">Друг</option>
             </select>
           </div>
         </div>
-        <div class="field"><label for="fast-notes">Бележка, по желание</label><input type="text" id="fast-notes" placeholder="преди обяд…"></div>
-        <div class="actions"><button class="btn" onclick="addEntry('fast')">Запиши</button></div>
+        <div class="field"><label for="fast-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="fast-notes" placeholder="преди обяд…"></div>
+        <div class="actions"><button class="btn" onclick="addEntry('fast')" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="tab-content" data-tab="slow">
@@ -852,22 +854,22 @@
           </div>
           <div class="field"><label for="slow-delivery">Доставка</label>
             <select id="slow-delivery">
-              <option value="pen">Писалка</option><option value="pump">Помпа</option><option value="iv">Венозно</option>
+              <option value="pen" data-i18n="delivery_pen">Писалка</option><option value="pump" data-i18n="delivery_pump">Помпа</option><option value="iv" data-i18n="delivery_iv">Венозно</option>
             </select>
           </div>
         </div>
-        <div class="field"><span class="label">Дата и час</span><div class="dt-picker" data-dt="slow" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="slow-notes">Бележка, по желание</label><input type="text" id="slow-notes" placeholder="нощна доза…"></div>
-        <div class="actions"><button class="btn" onclick="addEntry('slow')">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="slow" role="group" aria-label="Дата и час"></div></div>
+        <div class="field"><label for="slow-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="slow-notes" placeholder="нощна доза…"></div>
+        <div class="actions"><button class="btn" onclick="addEntry('slow')" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="tab-content" data-tab="ketones">
         <div class="row">
           <div class="field field-value"><label for="ketones-value">Кетони, mmol/L</label><input type="number" id="ketones-value" step="0.1" min="0" max="10" placeholder="0.3" inputmode="decimal"></div>
         </div>
-        <div class="field"><span class="label">Дата и час</span><div class="dt-picker" data-dt="ketones" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="ketones-notes">Бележка, по желание</label><input type="text" id="ketones-notes" placeholder="сутрин, повишена захар…"></div>
-        <div class="actions"><button class="btn" onclick="addEntry('ketones')">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="ketones" role="group" aria-label="Дата и час"></div></div>
+        <div class="field"><label for="ketones-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="ketones-notes" placeholder="сутрин, повишена захар…"></div>
+        <div class="actions"><button class="btn" onclick="addEntry('ketones')" data-i18n="save">Запиши</button></div>
         <p class="scale-note">
           <span><strong style="color:var(--ok)">под 0.6</strong>нормално</span>
           <span><strong style="color:var(--high)">0.6–1.5</strong>повишени</span>
@@ -881,15 +883,15 @@
           <div class="field field-value"><label for="activity-value">Продължителност, мин</label><input type="number" id="activity-value" step="5" min="1" max="600" placeholder="30" inputmode="numeric"></div>
           <div class="field"><label for="activity-intensity">Интензивност</label>
             <select id="activity-intensity">
-              <option value="light">Лека</option>
-              <option value="moderate">Умерена</option>
-              <option value="intense">Интензивна</option>
+              <option value="light" data-i18n="intensity_light">Лека</option>
+              <option value="moderate" data-i18n="intensity_moderate">Умерена</option>
+              <option value="intense" data-i18n="intensity_intense">Интензивна</option>
             </select>
           </div>
         </div>
-        <div class="field"><span class="label">Дата и час</span><div class="dt-picker" data-dt="activity" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="activity-notes">Бележка, по желание</label><input type="text" id="activity-notes" placeholder="разходка, плуване…"></div>
-        <div class="actions"><button class="btn" onclick="addEntry('activity')">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="activity" role="group" aria-label="Дата и час"></div></div>
+        <div class="field"><label for="activity-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="activity-notes" placeholder="разходка, плуване…"></div>
+        <div class="actions"><button class="btn" onclick="addEntry('activity')" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="tab-content" data-tab="alcohol">
@@ -897,43 +899,43 @@
           <div class="field field-value"><label for="alcohol-value">Брой напитки</label><input type="number" id="alcohol-value" step="0.5" min="0.5" max="10" placeholder="1" inputmode="decimal"></div>
         </div>
         <p class="hint">Една напитка е шот, чаша вино, бира 0.5 л или шприц.</p>
-        <div class="field"><span class="label">Дата и час</span><div class="dt-picker" data-dt="alcohol" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="alcohol-notes">Бележка, по желание</label><input type="text" id="alcohol-notes" placeholder="1 бира 0.5 л, 1 чаша вино…"></div>
-        <div class="actions"><button class="btn" onclick="addEntry('alcohol')">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="alcohol" role="group" aria-label="Дата и час"></div></div>
+        <div class="field"><label for="alcohol-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="alcohol-notes" placeholder="1 бира 0.5 л, 1 чаша вино…"></div>
+        <div class="actions"><button class="btn" onclick="addEntry('alcohol')" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="tab-content" data-tab="device_change">
         <div class="row">
           <div class="field"><label for="device_change-type">Устройство</label>
             <select id="device_change-type">
-              <option value="ampule">Ампула инсулин</option>
-              <option value="sensor">Сензор (CGM)</option>
-              <option value="patch">Пач помпа (резервоар)</option>
-              <option value="pump_base">Основа помпа</option>
-              <option value="settings_change">Смяна настройки</option>
+              <option value="ampule" data-i18n="device_ampule">Ампула инсулин</option>
+              <option value="sensor" data-i18n="device_sensor">Сензор (CGM)</option>
+              <option value="patch" data-i18n="device_patch">Пач помпа (резервоар)</option>
+              <option value="pump_base" data-i18n="device_pump_base">Основа помпа</option>
+              <option value="settings_change" data-i18n="device_settings">Смяна настройки</option>
             </select>
           </div>
         </div>
         <div id="patch-fields" class="row" style="display:none">
-          <div class="field"><label for="patch-filled">Напълнено (U)</label><input type="number" id="patch-filled" min="0" max="300" step="5" inputmode="numeric" placeholder="напр. 200"></div>
-          <div class="field"><label for="patch-remaining">Остатък (U)</label><input type="number" id="patch-remaining" min="0" max="300" step="1" inputmode="decimal" placeholder="при сваляне"></div>
-          <div class="field"><label for="patch-site">Място</label>
+          <div class="field"><label for="patch-filled" data-i18n="patch_filled">Напълнено (U)</label><input type="number" id="patch-filled" min="0" max="300" step="5" inputmode="numeric" placeholder="напр. 200"></div>
+          <div class="field"><label for="patch-remaining" data-i18n="patch_remaining">Остатък (U)</label><input type="number" id="patch-remaining" min="0" max="300" step="1" inputmode="decimal" placeholder="при сваляне"></div>
+          <div class="field"><label for="patch-site" data-i18n="patch_site">Място</label>
             <select id="patch-site">
               <option value="">—</option>
-              <option value="abdomen-L">Корем ляво</option>
-              <option value="abdomen-R">Корем дясно</option>
-              <option value="arm-L">Ръка лява</option>
-              <option value="arm-R">Ръка дясна</option>
-              <option value="leg-L">Крак ляв</option>
-              <option value="leg-R">Крак десен</option>
-              <option value="back-L">Гръб ляво</option>
-              <option value="back-R">Гръб дясно</option>
+              <option value="abdomen-L" data-i18n="site_abdomen_l">Корем ляво</option>
+              <option value="abdomen-R" data-i18n="site_abdomen_r">Корем дясно</option>
+              <option value="arm-L" data-i18n="site_arm_l">Ръка лява</option>
+              <option value="arm-R" data-i18n="site_arm_r">Ръка дясна</option>
+              <option value="leg-L" data-i18n="site_leg_l">Крак ляв</option>
+              <option value="leg-R" data-i18n="site_leg_r">Крак десен</option>
+              <option value="back-L" data-i18n="site_back_l">Гръб ляво</option>
+              <option value="back-R" data-i18n="site_back_r">Гръб дясно</option>
             </select>
           </div>
         </div>
-        <div class="field"><span class="label">Дата и час</span><div class="dt-picker" data-dt="device_change" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="device_change-notes">Бележка, по желание</label><input type="text" id="device_change-notes" placeholder="нова ампула, базал 21–23 ч от 0.75 на 0.65…"></div>
-        <div class="actions"><button class="btn" onclick="addEntry('device_change')">Запиши</button></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="device_change" role="group" aria-label="Дата и час"></div></div>
+        <div class="field"><label for="device_change-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="device_change-notes" placeholder="нова ампула, базал 21–23 ч от 0.75 на 0.65…"></div>
+        <div class="actions"><button class="btn" onclick="addEntry('device_change')" data-i18n="save">Запиши</button></div>
       </div>
     </section>
 
@@ -947,16 +949,16 @@
         <button class="zoom-btn" onclick="resetChartZoom()" title="Връща целия избран период">Нулирай увеличението</button>
       </div>
       <div class="seg" role="group" aria-label="Период">
-        <button class="filter-btn active" data-range="1">24 ч</button>
-        <button class="filter-btn" data-range="3">3 дни</button>
-        <button class="filter-btn" data-range="7">7 дни</button>
-        <button class="filter-btn" data-range="30">30 дни</button>
+        <button class="filter-btn active" data-range="1" data-i18n="period_24h">24 ч</button>
+        <button class="filter-btn" data-range="3" data-i18n="period_3d">3 дни</button>
+        <button class="filter-btn" data-range="7" data-i18n="period_7d">7 дни</button>
+        <button class="filter-btn" data-range="30" data-i18n="period_30d">30 дни</button>
         <button class="filter-btn" data-range="all">Всички</button>
       </div>
       <div class="seg" role="group" aria-label="Източник на показанията">
-        <button class="cgm-btn active" data-cgm="all">CGM и ръчни</button>
-        <button class="cgm-btn" data-cgm="manual">Само ръчни</button>
-        <button class="cgm-btn" data-cgm="cgm">Само CGM</button>
+        <button class="cgm-btn active" data-cgm="all" data-i18n="source_all">CGM и ръчни</button>
+        <button class="cgm-btn" data-cgm="manual" data-i18n="source_manual">Само ръчни</button>
+        <button class="cgm-btn" data-cgm="cgm" data-i18n="source_cgm">Само CGM</button>
       </div>
       <p class="hint">Периодът и източникът важат и за числата горе, и за историята. Зелената лента е целта 3.9–10 mmol/L.</p>
       <p class="hint">Щипни или завърти колелцето, за да увеличиш по времето; влачи, за да преместиш.</p>
@@ -1056,7 +1058,7 @@
   <a href="#entry">Запис</a>
   <a href="#chart-sec">График</a>
   <a href="#history-sec">История</a>
-  <a href="#more">Още</a>
+  <a href="#more" data-i18n="nav_history">Още</a>
 </nav>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

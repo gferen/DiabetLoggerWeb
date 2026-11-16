@@ -82,6 +82,8 @@ juggluco_pull.py       дърпа CGM от Juggluco на телефона (пр�
 juggluco_watermark.json докъде е стигнал последният pull
 dedupe.py              намира и чисти дублирани записи, по подразбиране само отчет (виж "Дубликати")
 logger2diabetesm.py    конвертор от Logger CSV към Diabetes:M ENTRIES формат за импорт
+static/i18n.js          i18n loader — зарежда езикови файлове, превключва с dropdown
+static/lang/*.json      преводи (bg, en, de, es, fr, pt, it, nl, pl) — за нов език: копирай en.json → xx.json, добави кода в i18n.js
 static/profiles.html   профили на помпата: базал, ISF, CR — история на настройките със сравнение
 qa.py                  QA тестове: python3 qa.py
 static/                index.html, meal.html, report.html, print-review.html, cgm_view.html
