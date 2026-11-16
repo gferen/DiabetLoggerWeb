@@ -305,6 +305,9 @@
   /* ---------- Quick actions ---------- */
   .quick { margin-top: 20px; }
   .quick-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .pump-bar { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+  .pump-bar .quick-btn { border-color: var(--device); }
+  .pump-bar .quick-btn[aria-expanded="true"] { border-color: var(--paper); }
 
   .quick-btn {
     display: flex;
@@ -700,6 +703,47 @@
         <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="nk" role="group" aria-label="Кога"></div></div>
         <div class="field"><label for="nk-notes">Бележка, по желание</label><input type="text" id="nk-notes"></div>
         <div class="actions"><button class="btn" onclick="addNightKit()">Запиши</button></div>
+      </div>
+
+      <div class="pump-bar">
+        <button class="quick-btn" data-quick="tb" aria-expanded="false" aria-controls="tb-panel" onclick="toggleQuick('tb')"><span class="ico" aria-hidden="true">⚡</span>Темп базал</button>
+        <button class="quick-btn" data-quick="qb" aria-expanded="false" aria-controls="qb-panel" onclick="toggleQuick('qb')"><span class="ico" aria-hidden="true">💉</span>Болус</button>
+        <button class="quick-btn" data-quick="susp" aria-expanded="false" aria-controls="susp-panel" onclick="toggleQuick('susp')"><span class="ico" aria-hidden="true">⏸️</span>Спиране</button>
+        <button class="quick-btn" data-quick="resume" aria-expanded="false" aria-controls="resume-panel" onclick="toggleQuick('resume')"><span class="ico" aria-hidden="true">🔄</span>Възобнови</button>
+      </div>
+
+      <div class="quick-panel" id="tb-panel" hidden>
+        <div class="row">
+          <div class="field"><label for="tb-pct">Процент (%)</label><input type="number" id="tb-pct" value="150" min="0" max="300" step="10" inputmode="numeric"></div>
+          <div class="field"><label for="tb-dur">Продължителност (мин)</label><input type="number" id="tb-dur" value="60" min="15" max="480" step="15" inputmode="numeric"></div>
+        </div>
+        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="tb" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="tb-notes">Бележка, по желание</label><input type="text" id="tb-notes" placeholder="причина за темп базал…"></div>
+        <div class="actions"><button class="btn" onclick="addTempBasal()">Запиши</button></div>
+      </div>
+
+      <div class="quick-panel" id="qb-panel" hidden>
+        <div class="row">
+          <div class="field"><label for="qb-units">Единици (U)</label><input type="number" id="qb-units" value="" min="0.1" max="20" step="0.1" inputmode="decimal"></div>
+        </div>
+        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="qb" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="qb-notes">Бележка, по желание</label><input type="text" id="qb-notes" placeholder="корекция, override…"></div>
+        <div class="actions"><button class="btn" onclick="addQuickBolus()">Запиши</button></div>
+      </div>
+
+      <div class="quick-panel" id="susp-panel" hidden>
+        <div class="row">
+          <div class="field"><label for="susp-dur">Продължителност (мин)</label><input type="number" id="susp-dur" value="30" min="5" max="480" step="5" inputmode="numeric"></div>
+        </div>
+        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="susp" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="susp-notes">Бележка, по желание</label><input type="text" id="susp-notes"></div>
+        <div class="actions"><button class="btn" onclick="addSuspend()">Запиши</button></div>
+      </div>
+
+      <div class="quick-panel" id="resume-panel" hidden>
+        <div class="field"><span class="label">Кога</span><div class="dt-picker" data-dt="resume" role="group" aria-label="Кога"></div></div>
+        <div class="field"><label for="resume-notes">Бележка, по желание</label><input type="text" id="resume-notes"></div>
+        <div class="actions"><button class="btn" onclick="addResume()">Запиши</button></div>
       </div>
     </section>
 
@@ -1484,6 +1528,83 @@ async function addNightKit() {
     setNowInto('nk');
     await reload();
     toast(`Записано: ${total} g (${payload.value} XE)`);
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+// --- Pump quick actions ---
+async function addTempBasal() {
+  syncNowFields(true);
+  const pct = parseInt(document.getElementById('tb-pct').value, 10);
+  const dur = parseInt(document.getElementById('tb-dur').value, 10);
+  if (!(pct >= 0) || !(dur > 0)) { toast('Процент и продължителност са задължителни', true); return; }
+  const dt = readDatetime('tb');
+  if (!dt) { toast('Невалидна дата или час', true); return; }
+  const extra = document.getElementById('tb-notes').value.trim();
+  const payload = { type: 'device_change', value: 0, time: dt.toISOString(),
+    notes: 'Temp Basal ' + pct + '% for ' + dur + ' min' + (extra ? ' \u2014 ' + extra : ''),
+    meta: { device_type: 'settings_change', temp_basal_pct: pct, temp_basal_min: dur } };
+  try {
+    await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
+    document.getElementById('tb-notes').value = '';
+    setNowInto('tb');
+    await reload();
+    toast('Записано: темп базал ' + pct + '% за ' + dur + ' мин');
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+async function addQuickBolus() {
+  syncNowFields(true);
+  const units = parseFloat(document.getElementById('qb-units').value);
+  if (!(units > 0)) { toast('Единиците са задължителни', true); return; }
+  const dt = readDatetime('qb');
+  if (!dt) { toast('Невалидна дата или час', true); return; }
+  const extra = document.getElementById('qb-notes').value.trim();
+  const payload = { type: 'fast', value: units, time: dt.toISOString(),
+    notes: extra || 'manual bolus',
+    meta: { delivery: 'pump', insulin_type: 'fiasp', bolus_kind: 'normal' } };
+  try {
+    await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
+    document.getElementById('qb-units').value = '';
+    document.getElementById('qb-notes').value = '';
+    setNowInto('qb');
+    await reload();
+    toast('Записано: болус ' + units + ' U');
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+async function addSuspend() {
+  syncNowFields(true);
+  const dur = parseInt(document.getElementById('susp-dur').value, 10);
+  if (!(dur > 0)) { toast('Продължителност е задължителна', true); return; }
+  const dt = readDatetime('susp');
+  if (!dt) { toast('Невалидна дата или час', true); return; }
+  const extra = document.getElementById('susp-notes').value.trim();
+  const payload = { type: 'device_change', value: 0, time: dt.toISOString(),
+    notes: 'Temp Basal 0% for ' + dur + ' min' + (extra ? ' \u2014 ' + extra : ''),
+    meta: { device_type: 'settings_change', temp_basal_pct: 0, temp_basal_min: dur } };
+  try {
+    await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
+    document.getElementById('susp-notes').value = '';
+    setNowInto('susp');
+    await reload();
+    toast('Записано: спиране за ' + dur + ' мин');
+  } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
+}
+
+async function addResume() {
+  syncNowFields(true);
+  const dt = readDatetime('resume');
+  if (!dt) { toast('Невалидна дата или час', true); return; }
+  const extra = document.getElementById('resume-notes').value.trim();
+  const payload = { type: 'device_change', value: 0, time: dt.toISOString(),
+    notes: 'Resume basal' + (extra ? ' \u2014 ' + extra : ''),
+    meta: { device_type: 'settings_change', resume: true } };
+  try {
+    await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
+    document.getElementById('resume-notes').value = '';
+    setNowInto('resume');
+    await reload();
+    toast('Записано: базал възобновен');
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
