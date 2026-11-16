@@ -5,6 +5,8 @@ FastAPI + SQLite + Chart.js, един контейнер.
 
 ![Diabet Logger](docs/screenshot.png)
 
+> **⚠️ Disclaimer:** This is a personal hobby project, NOT a certified medical device or clinical software. It is not intended to replace professional medical advice, diagnosis, or treatment. Dose calculations are suggestions only — always verify with your healthcare provider. Use entirely at your own risk.
+>
 > Калкулаторите дават **предложение**, не медицински съвет. Дозата винаги я потвърждава човекът, който инжектира.
 
 ## Какво може
