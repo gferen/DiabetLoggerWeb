@@ -884,6 +884,23 @@
             </select>
           </div>
         </div>
+        <div id="patch-fields" class="row" style="display:none">
+          <div class="field"><label for="patch-filled">Напълнено (U)</label><input type="number" id="patch-filled" min="0" max="300" step="5" inputmode="numeric" placeholder="напр. 200"></div>
+          <div class="field"><label for="patch-remaining">Остатък (U)</label><input type="number" id="patch-remaining" min="0" max="300" step="1" inputmode="decimal" placeholder="при сваляне"></div>
+          <div class="field"><label for="patch-site">Място</label>
+            <select id="patch-site">
+              <option value="">—</option>
+              <option value="abdomen-L">Корем ляво</option>
+              <option value="abdomen-R">Корем дясно</option>
+              <option value="arm-L">Ръка лява</option>
+              <option value="arm-R">Ръка дясна</option>
+              <option value="leg-L">Крак ляв</option>
+              <option value="leg-R">Крак десен</option>
+              <option value="back-L">Гръб ляво</option>
+              <option value="back-R">Гръб дясно</option>
+            </select>
+          </div>
+        </div>
         <div class="field"><span class="label">Дата и час</span><div class="dt-picker" data-dt="device_change" role="group" aria-label="Дата и час"></div></div>
         <div class="field"><label for="device_change-notes">Бележка, по желание</label><input type="text" id="device_change-notes" placeholder="нова ампула, базал 21–23 ч от 0.75 на 0.65…"></div>
         <div class="actions"><button class="btn" onclick="addEntry('device_change')">Запиши</button></div>
@@ -1390,6 +1407,11 @@ function syncNowFields(force) {
   });
 }
 
+// Show/hide patch fields when device type changes
+document.getElementById('device_change-type').addEventListener('change', function() {
+  document.getElementById('patch-fields').style.display = this.value === 'patch' ? 'flex' : 'none';
+});
+
 // ============= QUICK ACTIONS =============
 function toggleQuick(name) {
   document.querySelectorAll('.quick-btn').forEach(btn => {
@@ -1432,6 +1454,14 @@ async function addEntry(type) {
   }
   if (type === 'device_change') {
     payload.meta = { device_type: document.getElementById('device_change-type').value };
+    if (payload.meta.device_type === 'patch') {
+      const filled = document.getElementById('patch-filled').value;
+      const remaining = document.getElementById('patch-remaining').value;
+      const site = document.getElementById('patch-site').value;
+      if (filled) payload.meta.patch_filled_u = parseFloat(filled);
+      if (remaining) payload.meta.patch_remaining_u = parseFloat(remaining);
+      if (site) payload.meta.patch_site = site;
+    }
   }
   if (type === 'fast') {
     payload.meta = { ...(payload.meta||{}), delivery: document.getElementById('fast-delivery').value, insulin_type: document.getElementById('fast-insulin-type').value, bolus_kind: document.getElementById('fast-bolus-kind').value };
@@ -1455,6 +1485,12 @@ async function addEntry(type) {
     await api('/entries', { method: 'POST', body: JSON.stringify(payload) });
     if (type !== 'device_change') document.getElementById(`${type}-value`).value = '';
     document.getElementById(`${type}-notes`).value = '';
+    if (type === 'device_change') {
+      document.getElementById('patch-filled').value = '';
+      document.getElementById('patch-remaining').value = '';
+      document.getElementById('patch-site').value = '';
+      document.getElementById('patch-fields').style.display = 'none';
+    }
     if (type === 'fast') {
       document.getElementById('fast-carbs').value = '';
       document.getElementById('fast-meal-time-toggle').checked = false;
@@ -2061,7 +2097,21 @@ function renderHistory() {
     else if (e.type === 'device_change') {
       type = 'Устройство';
       const deviceLabels = { ampule: 'Ампула', sensor: 'Сензор', patch: 'Пач', pump_base: 'Основа помпа', settings_change: 'Настройки' };
-      value = e.meta && e.meta.device_type ? (deviceLabels[e.meta.device_type] || esc(e.meta.device_type)) : '—';
+      const dtLabel = e.meta && e.meta.device_type ? (deviceLabels[e.meta.device_type] || esc(e.meta.device_type)) : '—';
+      // Patch details: filled, remaining, site
+      const patchParts = [];
+      if (e.meta && e.meta.device_type === 'patch') {
+        if (e.meta.patch_filled_u != null) patchParts.push(e.meta.patch_filled_u + 'U');
+        if (e.meta.patch_remaining_u != null) patchParts.push('ост. ' + e.meta.patch_remaining_u + 'U');
+        const siteLabels = { 'abdomen-L': 'корем Л', 'abdomen-R': 'корем Д', 'arm-L': 'ръка Л', 'arm-R': 'ръка Д', 'leg-L': 'крак Л', 'leg-R': 'крак Д', 'back-L': 'гръб Л', 'back-R': 'гръб Д' };
+        if (e.meta.patch_site) patchParts.push(siteLabels[e.meta.patch_site] || e.meta.patch_site);
+      }
+      // Temp basal details
+      if (e.meta && e.meta.temp_basal_pct !== undefined) {
+        patchParts.push(e.meta.temp_basal_pct + '% / ' + (e.meta.temp_basal_min || '?') + ' мин');
+      }
+      if (e.meta && e.meta.resume) patchParts.push('възобновен');
+      value = dtLabel + (patchParts.length ? ' · ' + patchParts.join(', ') : '');
       cls = 'device-change';
     }
     else { type = esc(e.type); value = `${e.value}`; cls = ''; }
