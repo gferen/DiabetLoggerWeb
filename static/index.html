@@ -637,9 +637,9 @@
 <div id="login" class="login-overlay" style="display:none">
   <div class="login-box">
     <h2>🩸 Diabet Logger</h2>
-    <label for="login-user">Потребител</label>
+    <label for="login-user" data-i18n="user">Потребител</label>
     <input type="text" id="login-user" autocomplete="username">
-    <label for="login-pass">Парола</label>
+    <label for="login-pass" data-i18n="password">Парола</label>
     <input type="password" id="login-pass" autocomplete="current-password">
     <button class="btn" onclick="doLogin()" data-i18n="login">Вход</button>
     <div class="login-error" id="login-error" role="alert"></div>
@@ -651,30 +651,30 @@
 <header class="top">
   <div class="brand-block">
     <a class="brand" href="#now">🩸 Diabet Logger</a>
-    <span class="status" id="status"><span class="dot"></span><span id="status-text">свързване...</span></span>
+    <span class="status" id="status"><span class="dot"></span><span id="status-text" data-i18n="cgm_connecting">свързване...</span></span>
   </div>
-  <button class="btn secondary small" id="cgm-sync-btn" onclick="syncCgm()" title="Дърпа новите CGM показания от телефона и обновява записите" data-i18n="refresh">Обнови</button>
-  <nav class="top-links" aria-label="Други страници">
-    <a href="/meal" target="_blank" rel="noopener" title="Хранене с XE калкулатор (в нов таб)" data-i18n="nav_meal">Хранене</a>
-    <a href="/report" target="_blank" rel="noopener" title="Отчет за лекар (в нов таб)" data-i18n="nav_report">Отчет за лекар</a>
-    <a href="/print-review" target="_blank" rel="noopener" title="Разпечатка за диетолог (в нов таб)" data-i18n="nav_print">За диетолог</a>
-    <script src="/static/i18n.js" defer></script>
-    <a href="/static/profiles.html" target="_blank" rel="noopener" title="Профили на помпата (базал, ISF, CR)" data-i18n="nav_profiles">Профили</a>
+  <button class="btn secondary small" id="cgm-sync-btn" onclick="syncCgm()" title="Дърпа новите CGM показания от телефона и обновява записите" data-i18n="refresh" data-i18n-title="cgm_sync_title">Обнови</button>
+  <nav class="top-links" aria-label="Други страници" data-i18n-aria="aria_more_pages">
+    <a href="/meal" target="_blank" rel="noopener" title="Хранене с XE калкулатор (в нов таб)" data-i18n="nav_meal" data-i18n-title="nav_meal_title">Хранене</a>
+    <a href="/report" target="_blank" rel="noopener" title="Отчет за лекар (в нов таб)" data-i18n="nav_report" data-i18n-title="nav_report_title">Отчет за лекар</a>
+    <a href="/print-review" target="_blank" rel="noopener" title="Разпечатка за диетолог (в нов таб)" data-i18n="nav_print" data-i18n-title="nav_print_title">За диетолог</a>
+    <script>document.write('<script src="' + (location.protocol === 'file:' ? 'i18n.js' : '/static/i18n.js') + '"><\/script>');</script>
+    <a href="/static/profiles.html" target="_blank" rel="noopener" title="Профили на помпата (базал, ISF, CR)" data-i18n="nav_profiles" data-i18n-title="nav_profiles_title">Профили</a>
     <select id="lang-select" style="background:var(--ink);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--paper);padding:4px 8px;cursor:pointer;font-size:13px;width:160px" title="Change language"></select>
   </nav>
 </header>
 
-<p class="demo-banner" id="demo-banner" hidden>Демо данни. Файлът е отворен от диска, без сървър: числата са измислени и нищо не се записва.</p>
+<p class="demo-banner" id="demo-banner" hidden data-i18n="demo_notice">Демо данни. Файлът е отворен от диска, без сървър: числата са измислени и нищо не се записва.</p>
 
 <div class="layout">
 
   <div class="console">
 
-    <section id="now" aria-label="Последно показание">
+    <section id="now" aria-label="Последно показание" data-i18n-aria="aria_latest_reading">
       <div id="stats"></div>
     </section>
 
-    <section class="quick" aria-label="Бързи записи">
+    <section class="quick" aria-label="Бързи записи" data-i18n-aria="aria_quick_entries">
       <div class="quick-bar">
         <button class="quick-btn" data-quick="hypo" aria-expanded="false" aria-controls="hypo-panel" onclick="toggleQuick('hypo')"><span class="ico" aria-hidden="true">🍬</span><span data-i18n="quick_hypo">Ниска</span></button>
         <button class="quick-btn" data-quick="cig" aria-expanded="false" aria-controls="cig-panel" onclick="toggleQuick('cig')"><span class="ico" aria-hidden="true">🚬</span><span data-i18n="quick_cig">Цигара</span></button>
@@ -683,12 +683,12 @@
 
       <div class="quick-panel" id="hypo-panel" hidden>
         <div class="row">
-          <div class="field"><label for="hypo-g" data-i18n="quick_dose_note">Грамове в една доза</label><input type="number" id="hypo-g" value="3" min="1" max="50" step="1" inputmode="decimal" title="грама в една доза (напр. таблетка глюкоза)"></div>
+          <div class="field"><label for="hypo-g" data-i18n="quick_dose_note">Грамове в една доза</label><input type="number" id="hypo-g" value="3" min="1" max="50" step="1" inputmode="decimal" title="грама в една доза (напр. таблетка глюкоза)" data-i18n-title="quick_dose_title"></div>
           <div class="field"><label for="hypo-n" data-i18n="stats_doses">Брой дози</label><input type="number" id="hypo-n" value="5" min="1" max="20" step="1" inputmode="numeric"></div>
         </div>
         <p class="quick-total" id="hypo-total" aria-live="polite"></p>
-        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="hypo" role="group" aria-label="Кога"></div></div>
-        <div class="field"><label for="hypo-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="hypo-notes" placeholder="кола, глюкозни таблетки…"></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="hypo" role="group" aria-label="Кога" data-i18n-aria="report_when"></div></div>
+        <div class="field"><label for="hypo-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="hypo-notes" placeholder="кола, глюкозни таблетки…" data-i18n-placeholder="placeholder_hypo_carbs"></div>
         <div class="actions"><button class="btn" onclick="addHypo()" data-i18n="save">Запиши</button></div>
       </div>
 
@@ -696,7 +696,7 @@
         <div class="row">
           <div class="field"><label for="cig-n" data-i18n="stats_doses">Брой</label><input type="number" id="cig-n" value="1" min="1" max="10" step="1" inputmode="numeric"></div>
         </div>
-        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="cig" role="group" aria-label="Кога"></div></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="cig" role="group" aria-label="Кога" data-i18n-aria="report_when"></div></div>
         <div class="field"><label for="cig-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="cig-notes"></div>
         <div class="actions"><button class="btn" onclick="addCig()" data-i18n="save">Запиши</button></div>
       </div>
@@ -707,7 +707,7 @@
           <div class="field"><label for="nk-slow-g" data-i18n="quick_slow_carbs">Бавни въглехидрати, g</label><input type="number" id="nk-slow-g" value="0" min="0" max="50" step="1" inputmode="decimal"></div>
         </div>
         <p class="quick-total" id="nk-total" aria-live="polite"></p>
-        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="nk" role="group" aria-label="Кога"></div></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="nk" role="group" aria-label="Кога" data-i18n-aria="report_when"></div></div>
         <div class="field"><label for="nk-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="nk-notes"></div>
         <div class="actions"><button class="btn" onclick="addNightKit()" data-i18n="save">Запиши</button></div>
       </div>
@@ -724,8 +724,8 @@
           <div class="field"><label for="tb-pct" data-i18n="pump_pct">Процент (%)</label><input type="number" id="tb-pct" value="150" min="0" max="300" step="10" inputmode="numeric"></div>
           <div class="field"><label for="tb-dur" data-i18n="pump_duration">Продължителност (мин)</label><input type="number" id="tb-dur" value="60" min="15" max="480" step="15" inputmode="numeric"></div>
         </div>
-        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="tb" role="group" aria-label="Кога"></div></div>
-        <div class="field"><label for="tb-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="tb-notes" placeholder="причина за темп базал…"></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="tb" role="group" aria-label="Кога" data-i18n-aria="report_when"></div></div>
+        <div class="field"><label for="tb-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="tb-notes" placeholder="причина за темп базал…" data-i18n-placeholder="ph_temp_basal"></div>
         <div class="actions"><button class="btn" onclick="addTempBasal()" data-i18n="save">Запиши</button></div>
       </div>
 
@@ -733,16 +733,16 @@
         <div class="row">
           <div class="field"><label for="qb-units" data-i18n="pump_units">Единици (U)</label><input type="number" id="qb-units" value="" min="0.1" max="20" step="0.1" inputmode="decimal"></div>
         </div>
-        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="qb" role="group" aria-label="Кога"></div></div>
-        <div class="field"><label for="qb-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="qb-notes" placeholder="корекция, override…"></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="qb" role="group" aria-label="Кога" data-i18n-aria="report_when"></div></div>
+        <div class="field"><label for="qb-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="qb-notes" placeholder="корекция, override…" data-i18n-placeholder="ph_bolus_note"></div>
         <div class="actions"><button class="btn" onclick="addQuickBolus()" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="quick-panel" id="susp-panel" hidden>
         <div class="row">
-          <div class="field"><label for="susp-dur">Продължителност (мин)</label><input type="number" id="susp-dur" value="30" min="5" max="480" step="5" inputmode="numeric"></div>
+          <div class="field"><label for="susp-dur" data-i18n="pump_duration">Продължителност (мин)</label><input type="number" id="susp-dur" value="30" min="5" max="480" step="5" inputmode="numeric"></div>
         </div>
-        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="susp" role="group" aria-label="Кога"></div></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="susp" role="group" aria-label="Кога" data-i18n-aria="report_when"></div></div>
         <div class="field"><label for="susp-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="susp-notes"></div>
         <div class="actions"><button class="btn" onclick="addSuspend()" data-i18n="save">Запиши</button></div>
       </div>
@@ -753,7 +753,7 @@
 
       <div class="quick-panel" id="period-panel" hidden>
         <div class="row">
-          <div class="field"><label for="period-type">Тип</label>
+          <div class="field"><label for="period-type" data-i18n="type_label">Тип</label>
             <select id="period-type">
               <option value="hospital" data-i18n="period_hospital">🏥 Болница</option>
               <option value="travel" data-i18n="period_travel">✈️ Пътуване</option>
@@ -768,12 +768,12 @@
           <div class="field"><label for="period-start-date" data-i18n="period_start">Начало</label><input type="date" id="period-start-date"></div>
           <div class="field"><label for="period-end-date" data-i18n="period_end">Край</label><input type="date" id="period-end-date"></div>
         </div>
-        <div class="field"><label for="period-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="period-notes" placeholder="подробности…"></div>
+        <div class="field"><label for="period-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="period-notes" placeholder="подробности…" data-i18n-placeholder="ph_details"></div>
         <div class="actions"><button class="btn" onclick="addPeriod()" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="quick-panel" id="resume-panel" hidden>
-        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="resume" role="group" aria-label="Кога"></div></div>
+        <div class="field"><span class="label" data-i18n="datetime">Кога</span><div class="dt-picker" data-dt="resume" role="group" aria-label="Кога" data-i18n-aria="report_when"></div></div>
         <div class="field"><label for="resume-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="resume-notes"></div>
         <div class="actions"><button class="btn" onclick="addResume()" data-i18n="save">Запиши</button></div>
       </div>
@@ -782,34 +782,34 @@
     <section class="tool" id="entry">
       <h2 data-i18n="new_entry">Нов запис</h2>
 
-      <div class="types" role="group" aria-label="Тип запис">
+      <div class="types" role="group" aria-label="Тип запис" data-i18n-aria="aria_entry_type">
         <button class="type-chip active" aria-pressed="true" data-type="bg" style="--c:var(--ok)" data-i18n="type_bg">Захар</button>
-        <button class="type-chip" aria-pressed="false" data-type="fast" style="--c:var(--fast)" title="Бърз инсулин" data-i18n="type_fast">Бърз</button>
-        <button class="type-chip" aria-pressed="false" data-type="slow" style="--c:var(--slow)" title="Бавен инсулин" data-i18n="type_slow">Бавен</button>
+        <button class="type-chip" aria-pressed="false" data-type="fast" style="--c:var(--fast)" title="Бърз инсулин" data-i18n="type_fast" data-i18n-title="title_fast_insulin">Бърз</button>
+        <button class="type-chip" aria-pressed="false" data-type="slow" style="--c:var(--slow)" title="Бавен инсулин" data-i18n="type_slow" data-i18n-title="title_slow_insulin">Бавен</button>
         <button class="type-chip" aria-pressed="false" data-type="ketones" style="--c:var(--ketones)" data-i18n="type_ketones">Кетони</button>
         <button class="type-chip" aria-pressed="false" data-type="activity" style="--c:var(--activity)" data-i18n="type_activity">Активност</button>
         <button class="type-chip" aria-pressed="false" data-type="alcohol" style="--c:var(--alcohol)" data-i18n="type_alcohol">Алкохол</button>
         <button class="type-chip" aria-pressed="false" data-type="device_change" style="--c:var(--device)" data-i18n="type_device">Устройство</button>
-        <a class="type-chip link" href="/meal" target="_blank" rel="noopener" style="--c:var(--meal)" title="Хранене с XE калкулатор, отваря се в нов таб" data-i18n="type_meal">Хранене</a>
+        <a class="type-chip link" href="/meal" target="_blank" rel="noopener" style="--c:var(--meal)" title="Хранене с XE калкулатор, отваря се в нов таб" data-i18n="type_meal" data-i18n-title="meal_calc_title">Хранене</a>
       </div>
 
       <div class="tab-content active" data-tab="bg">
         <div class="row">
-          <div class="field field-value"><label for="bg-value">Кръвна захар, mmol/L</label><input type="number" id="bg-value" step="0.1" min="1" max="30" placeholder="7.2" inputmode="decimal"></div>
+          <div class="field field-value"><label for="bg-value" data-i18n="bg_label">Кръвна захар, mmol/L</label><input type="number" id="bg-value" step="0.1" min="1" max="30" placeholder="7.2" inputmode="decimal"></div>
           <div class="field"><label for="bg-source" data-i18n="bg_source">Източник</label>
             <select id="bg-source">
-              <option value="own" data-i18n="bg_source_own">Мой глюкомер</option><option value="hospital" data-i18n="bg_source_hospital">Болничен</option><option value="cgm_manual">CGM (ръчно)</option>
+              <option value="own" data-i18n="bg_source_own">Мой глюкомер</option><option value="hospital" data-i18n="bg_source_hospital">Болничен</option><option value="cgm_manual" data-i18n="source_cgm_manual">CGM (ръчно)</option>
             </select>
           </div>
         </div>
-        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="bg" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="bg-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="bg-notes" placeholder="преди закуска, след храна…"></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="bg" role="group" aria-label="Дата и час" data-i18n-aria="datetime"></div></div>
+        <div class="field"><label for="bg-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="bg-notes" placeholder="преди закуска, след храна…" data-i18n-placeholder="placeholder_before_breakfast"></div>
         <div class="actions"><button class="btn" onclick="addEntry('bg')" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="tab-content" data-tab="fast">
         <div class="row">
-          <div class="field field-value"><label for="fast-value">Единици</label><input type="number" id="fast-value" step="0.05" min="0" max="50" placeholder="8" inputmode="decimal"></div>
+          <div class="field field-value"><label for="fast-value" data-i18n="units">Единици</label><input type="number" id="fast-value" step="0.05" min="0" max="50" placeholder="8" inputmode="decimal"></div>
           <div class="field"><label for="fast-bolus-kind" data-i18n="bolus_kind">Вид болус</label>
             <select id="fast-bolus-kind" onchange="document.getElementById('fast-bolus-dur-row').hidden = this.value === 'normal'">
               <option value="normal" data-i18n="bolus_normal">Нормален</option><option value="extended" data-i18n="bolus_extended">Удължен</option><option value="combo" data-i18n="bolus_combo">Комбо</option>
@@ -817,16 +817,16 @@
           </div>
         </div>
         <div class="row" id="fast-bolus-dur-row" hidden>
-          <div class="field"><label for="fast-bolus-duration">Продължителност, мин</label><input type="number" id="fast-bolus-duration" step="5" min="5" max="480" placeholder="60" inputmode="numeric"></div>
+          <div class="field"><label for="fast-bolus-duration" data-i18n="bolus_duration">Продължителност, мин</label><input type="number" id="fast-bolus-duration" step="5" min="5" max="480" placeholder="60" inputmode="numeric"></div>
         </div>
-        <div class="field"><span class="label">Дата и час на дозата</span><div class="dt-picker" data-dt="fast" role="group" aria-label="Дата и час на дозата"></div></div>
-        <div class="field"><label for="fast-carbs">Въглехидрати в грамове, по желание</label><input type="number" id="fast-carbs" step="1" min="1" max="500" placeholder="45" inputmode="numeric"></div>
+        <div class="field"><span class="label" data-i18n="datetime_dose">Дата и час на дозата</span><div class="dt-picker" data-dt="fast" role="group" aria-label="Дата и час на дозата" data-i18n-aria="datetime_dose"></div></div>
+        <div class="field"><label for="fast-carbs" data-i18n="carbs_g">Въглехидрати в грамове, по желание</label><input type="number" id="fast-carbs" step="1" min="1" max="500" placeholder="45" inputmode="numeric"></div>
         <label class="check">
           <input type="checkbox" id="fast-meal-time-toggle" onchange="document.getElementById('fast-meal-time-row').style.display = this.checked ? 'flex' : 'none'; if (this.checked) setNowInto('fast-meal');">
-          Храненето започна в друг час
+          <span data-i18n="meal_other_time">Храненето започна в друг час</span>
         </label>
         <div class="row" id="fast-meal-time-row" style="display:none">
-          <div class="field"><span class="label">Начало на хранене</span><div class="dt-picker" data-dt="fast-meal" role="group" aria-label="Начало на хранене"></div></div>
+          <div class="field"><span class="label" data-i18n="meal_time">Начало на хранене</span><div class="dt-picker" data-dt="fast-meal" role="group" aria-label="Начало на хранене" data-i18n-aria="meal_time"></div></div>
         </div>
         <div class="row">
           <div class="field"><label for="fast-delivery" data-i18n="delivery">Доставка</label>
@@ -836,52 +836,52 @@
           </div>
           <div class="field"><label for="fast-insulin-type" data-i18n="insulin_type">Вид инсулин</label>
             <select id="fast-insulin-type">
-              <option value="fiasp">Fiasp</option><option value="novorapid">NovoRapid</option><option value="other">Друг</option>
+              <option value="fiasp">Fiasp</option><option value="novorapid">NovoRapid</option><option value="other" data-i18n="device_other">Друг</option>
             </select>
           </div>
         </div>
-        <div class="field"><label for="fast-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="fast-notes" placeholder="преди обяд…"></div>
+        <div class="field"><label for="fast-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="fast-notes" placeholder="преди обяд…" data-i18n-placeholder="placeholder_before_lunch"></div>
         <div class="actions"><button class="btn" onclick="addEntry('fast')" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="tab-content" data-tab="slow">
         <div class="row">
-          <div class="field field-value"><label for="slow-value">Единици</label><input type="number" id="slow-value" step="0.5" min="0" max="50" placeholder="20" inputmode="decimal"></div>
-          <div class="field"><label for="slow-insulin-type">Вид инсулин</label>
+          <div class="field field-value"><label for="slow-value" data-i18n="units">Единици</label><input type="number" id="slow-value" step="0.5" min="0" max="50" placeholder="20" inputmode="decimal"></div>
+          <div class="field"><label for="slow-insulin-type" data-i18n="insulin_type">Вид инсулин</label>
             <select id="slow-insulin-type">
-              <option value="tresiba">Tresiba</option><option value="other">Друг</option>
+              <option value="tresiba">Tresiba</option><option value="other" data-i18n="device_other">Друг</option>
             </select>
           </div>
-          <div class="field"><label for="slow-delivery">Доставка</label>
+          <div class="field"><label for="slow-delivery" data-i18n="delivery">Доставка</label>
             <select id="slow-delivery">
               <option value="pen" data-i18n="delivery_pen">Писалка</option><option value="pump" data-i18n="delivery_pump">Помпа</option><option value="iv" data-i18n="delivery_iv">Венозно</option>
             </select>
           </div>
         </div>
-        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="slow" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="slow-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="slow-notes" placeholder="нощна доза…"></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="slow" role="group" aria-label="Дата и час" data-i18n-aria="datetime"></div></div>
+        <div class="field"><label for="slow-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="slow-notes" placeholder="нощна доза…" data-i18n-placeholder="placeholder_night_dose"></div>
         <div class="actions"><button class="btn" onclick="addEntry('slow')" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="tab-content" data-tab="ketones">
         <div class="row">
-          <div class="field field-value"><label for="ketones-value">Кетони, mmol/L</label><input type="number" id="ketones-value" step="0.1" min="0" max="10" placeholder="0.3" inputmode="decimal"></div>
+          <div class="field field-value"><label for="ketones-value" data-i18n="ketones_label">Кетони, mmol/L</label><input type="number" id="ketones-value" step="0.1" min="0" max="10" placeholder="0.3" inputmode="decimal"></div>
         </div>
-        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="ketones" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="ketones-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="ketones-notes" placeholder="сутрин, повишена захар…"></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="ketones" role="group" aria-label="Дата и час" data-i18n-aria="datetime"></div></div>
+        <div class="field"><label for="ketones-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="ketones-notes" placeholder="сутрин, повишена захар…" data-i18n-placeholder="placeholder_morning"></div>
         <div class="actions"><button class="btn" onclick="addEntry('ketones')" data-i18n="save">Запиши</button></div>
         <p class="scale-note">
-          <span><strong style="color:var(--ok)">под 0.6</strong>нормално</span>
-          <span><strong style="color:var(--high)">0.6–1.5</strong>повишени</span>
-          <span><strong style="color:var(--fast)">1.5–3.0</strong>риск от DKA</span>
-          <span><strong style="color:var(--danger)">над 3.0</strong>спешно</span>
+          <span><strong style="color:var(--ok)" data-i18n="ketones_under_06">под 0.6</strong><span data-i18n="ketones_normal">нормално</span></span>
+          <span><strong style="color:var(--high)">0.6–1.5</strong><span data-i18n="ketones_elevated">повишени</span></span>
+          <span><strong style="color:var(--fast)">1.5–3.0</strong><span data-i18n="ketones_risk">риск от DKA</span></span>
+          <span><strong style="color:var(--danger)" data-i18n="ketones_over_30">над 3.0</strong><span data-i18n="ketones_emergency">спешно</span></span>
         </p>
       </div>
 
       <div class="tab-content" data-tab="activity">
         <div class="row">
-          <div class="field field-value"><label for="activity-value">Продължителност, мин</label><input type="number" id="activity-value" step="5" min="1" max="600" placeholder="30" inputmode="numeric"></div>
-          <div class="field"><label for="activity-intensity">Интензивност</label>
+          <div class="field field-value"><label for="activity-value" data-i18n="bolus_duration">Продължителност, мин</label><input type="number" id="activity-value" step="5" min="1" max="600" placeholder="30" inputmode="numeric"></div>
+          <div class="field"><label for="activity-intensity" data-i18n="activity_intensity">Интензивност</label>
             <select id="activity-intensity">
               <option value="light" data-i18n="intensity_light">Лека</option>
               <option value="moderate" data-i18n="intensity_moderate">Умерена</option>
@@ -889,24 +889,24 @@
             </select>
           </div>
         </div>
-        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="activity" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="activity-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="activity-notes" placeholder="разходка, плуване…"></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="activity" role="group" aria-label="Дата и час" data-i18n-aria="datetime"></div></div>
+        <div class="field"><label for="activity-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="activity-notes" placeholder="разходка, плуване…" data-i18n-placeholder="activity_placeholder"></div>
         <div class="actions"><button class="btn" onclick="addEntry('activity')" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="tab-content" data-tab="alcohol">
         <div class="row">
-          <div class="field field-value"><label for="alcohol-value">Брой напитки</label><input type="number" id="alcohol-value" step="0.5" min="0.5" max="10" placeholder="1" inputmode="decimal"></div>
+          <div class="field field-value"><label for="alcohol-value" data-i18n="alcohol_units_label">Брой напитки</label><input type="number" id="alcohol-value" step="0.5" min="0.5" max="10" placeholder="1" inputmode="decimal"></div>
         </div>
-        <p class="hint">Една напитка е шот, чаша вино, бира 0.5 л или шприц.</p>
-        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="alcohol" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="alcohol-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="alcohol-notes" placeholder="1 бира 0.5 л, 1 чаша вино…"></div>
+        <p class="hint" data-i18n="alcohol_note">Една напитка е шот, чаша вино, бира 0.5 л или шприц.</p>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="alcohol" role="group" aria-label="Дата и час" data-i18n-aria="datetime"></div></div>
+        <div class="field"><label for="alcohol-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="alcohol-notes" placeholder="1 бира 0.5 л, 1 чаша вино…" data-i18n-placeholder="alcohol_placeholder"></div>
         <div class="actions"><button class="btn" onclick="addEntry('alcohol')" data-i18n="save">Запиши</button></div>
       </div>
 
       <div class="tab-content" data-tab="device_change">
         <div class="row">
-          <div class="field"><label for="device_change-type">Устройство</label>
+          <div class="field"><label for="device_change-type" data-i18n="type_device">Устройство</label>
             <select id="device_change-type">
               <option value="ampule" data-i18n="device_ampule">Ампула инсулин</option>
               <option value="sensor" data-i18n="device_sensor">Сензор (CGM)</option>
@@ -917,8 +917,8 @@
           </div>
         </div>
         <div id="patch-fields" class="row" style="display:none">
-          <div class="field"><label for="patch-filled" data-i18n="patch_filled">Напълнено (U)</label><input type="number" id="patch-filled" min="0" max="300" step="5" inputmode="numeric" placeholder="напр. 200"></div>
-          <div class="field"><label for="patch-remaining" data-i18n="patch_remaining">Остатък (U)</label><input type="number" id="patch-remaining" min="0" max="300" step="1" inputmode="decimal" placeholder="при сваляне"></div>
+          <div class="field"><label for="patch-filled" data-i18n="patch_filled">Напълнено (U)</label><input type="number" id="patch-filled" min="0" max="300" step="5" inputmode="numeric" placeholder="напр. 200" data-i18n-placeholder="ph_example_200"></div>
+          <div class="field"><label for="patch-remaining" data-i18n="patch_remaining">Остатък (U)</label><input type="number" id="patch-remaining" min="0" max="300" step="1" inputmode="decimal" placeholder="при сваляне" data-i18n-placeholder="ph_on_removal"></div>
           <div class="field"><label for="patch-site" data-i18n="patch_site">Място</label>
             <select id="patch-site">
               <option value="">—</option>
@@ -933,8 +933,8 @@
             </select>
           </div>
         </div>
-        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="device_change" role="group" aria-label="Дата и час"></div></div>
-        <div class="field"><label for="device_change-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="device_change-notes" placeholder="нова ампула, базал 21–23 ч от 0.75 на 0.65…"></div>
+        <div class="field"><span class="label" data-i18n="datetime">Дата и час</span><div class="dt-picker" data-dt="device_change" role="group" aria-label="Дата и час" data-i18n-aria="datetime"></div></div>
+        <div class="field"><label for="device_change-notes" data-i18n="notes">Бележка, по желание</label><input type="text" id="device_change-notes" placeholder="нова ампула, базал 21–23 ч от 0.75 на 0.65…" data-i18n-placeholder="device_placeholder"></div>
         <div class="actions"><button class="btn" onclick="addEntry('device_change')" data-i18n="save">Запиши</button></div>
       </div>
     </section>
@@ -945,36 +945,36 @@
 
     <section class="view" id="chart-sec">
       <div class="view-head">
-        <h2>График</h2>
-        <button class="zoom-btn" onclick="resetChartZoom()" title="Връща целия избран период">Нулирай увеличението</button>
+        <h2 data-i18n="chart_heading">График</h2>
+        <button class="zoom-btn" onclick="resetChartZoom()" title="Връща целия избран период" data-i18n-title="tooltip_reset_zoom" data-i18n="chart_reset_zoom">Нулирай увеличението</button>
       </div>
-      <div class="seg" role="group" aria-label="Период">
+      <div class="seg" role="group" aria-label="Период" data-i18n-aria="period_tag">
         <button class="filter-btn active" data-range="1" data-i18n="period_24h">24 ч</button>
         <button class="filter-btn" data-range="3" data-i18n="period_3d">3 дни</button>
         <button class="filter-btn" data-range="7" data-i18n="period_7d">7 дни</button>
         <button class="filter-btn" data-range="30" data-i18n="period_30d">30 дни</button>
-        <button class="filter-btn" data-range="all">Всички</button>
+        <button class="filter-btn" data-range="all" data-i18n="source_all_short">Всички</button>
       </div>
-      <div class="seg" role="group" aria-label="Източник на показанията">
+      <div class="seg" role="group" aria-label="Източник на показанията" data-i18n-aria="aria_source">
         <button class="cgm-btn active" data-cgm="all" data-i18n="source_all">CGM и ръчни</button>
         <button class="cgm-btn" data-cgm="manual" data-i18n="source_manual">Само ръчни</button>
         <button class="cgm-btn" data-cgm="cgm" data-i18n="source_cgm">Само CGM</button>
       </div>
-      <p class="hint">Периодът и източникът важат и за числата горе, и за историята. Зелената лента е целта 3.9–10 mmol/L.</p>
-      <p class="hint">Щипни или завърти колелцето, за да увеличиш по времето; влачи, за да преместиш.</p>
+      <p class="hint" data-i18n="chart_target_note">Периодът и източникът важат и за числата горе, и за историята. Зелената лента е целта 3.9–10 mmol/L.</p>
+      <p class="hint" data-i18n="chart_zoom_hint">Щипни или завърти колелцето, за да увеличиш по времето; влачи, за да преместиш.</p>
       <div class="chart-wrap"><canvas id="chart"></canvas></div>
     </section>
 
     <section class="view" id="tir">
       <div class="view-head">
-        <h2>Време в диапазон</h2>
-        <select id="tir-period" onchange="loadStats()" aria-label="Период за времето в диапазон">
-          <option value="1">24 часа</option>
-          <option value="3">3 дни</option>
-          <option value="7">7 дни</option>
-          <option value="14" selected>14 дни</option>
-          <option value="30">30 дни</option>
-          <option value="90">90 дни</option>
+        <h2 data-i18n="stats_tir">Време в диапазон</h2>
+        <select id="tir-period" onchange="loadStats()" aria-label="Период за времето в диапазон" data-i18n-aria="aria_tir_period">
+          <option value="1" data-i18n="period_24_hours">24 часа</option>
+          <option value="3" data-i18n="period_3d">3 дни</option>
+          <option value="7" data-i18n="period_7d">7 дни</option>
+          <option value="14" selected data-i18n="period_14d">14 дни</option>
+          <option value="30" data-i18n="period_30d">30 дни</option>
+          <option value="90" data-i18n="period_90d">90 дни</option>
         </select>
       </div>
       <div id="tir-content"></div>
@@ -982,69 +982,69 @@
 
     <section class="tool" id="day">
       <div class="view-head">
-        <h2>Дневен профил</h2>
-        <input type="date" id="dp-date" onchange="dpDirty=false;loadDayPanel()" aria-label="Ден">
+        <h2 data-i18n="day_profile">Дневен профил</h2>
+        <input type="date" id="dp-date" onchange="dpDirty=false;loadDayPanel()" aria-label="Ден" data-i18n-aria="aria_day">
       </div>
-      <p class="hint">Само за справка, не влияе на калкулаторите и на дозите.</p>
+      <p class="hint" data-i18n="day_profile_note">Само за справка, не влияе на калкулаторите и на дозите.</p>
       <div id="dp-response" class="dp-resp"></div>
-      <div class="seg" role="group" aria-label="Профил за деня">
-        <button class="dp-btn" data-profile="fast" onclick="setDayProfile('fast')">🚀 Бърз</button>
-        <button class="dp-btn" data-profile="normal" onclick="setDayProfile('normal')">⚖️ Нормален</button>
-        <button class="dp-btn" data-profile="slow" onclick="setDayProfile('slow')">🐢 Бавен</button>
-        <button class="dp-btn" onclick="clearDayProfile()" title="Махни профила за деня">Изчисти</button>
+      <div class="seg" role="group" aria-label="Профил за деня" data-i18n-aria="aria_day_profile">
+        <button class="dp-btn" data-profile="fast" onclick="setDayProfile('fast')" data-i18n="fast_emoji">🚀 Бърз</button>
+        <button class="dp-btn" data-profile="normal" onclick="setDayProfile('normal')" data-i18n="normal_emoji">⚖️ Нормален</button>
+        <button class="dp-btn" data-profile="slow" onclick="setDayProfile('slow')" data-i18n="slow_emoji">🐢 Бавен</button>
+        <button class="dp-btn" onclick="clearDayProfile()" title="Махни профила за деня" data-i18n-title="tooltip_remove_profile" data-i18n="clear">Изчисти</button>
       </div>
-      <div class="field"><label for="dp-notes">Бележка за деня, по желание</label>
-        <input type="text" id="dp-notes" maxlength="2000" placeholder="плато 10–12 цял ден, силна активност…" oninput="dpDirty=true"></div>
-      <p class="hint">Бележката се записва, когато избереш профил.</p>
+      <div class="field"><label for="dp-notes" data-i18n="day_note_label">Бележка за деня, по желание</label>
+        <input type="text" id="dp-notes" maxlength="2000" placeholder="плато 10–12 цял ден, силна активност…" oninput="dpDirty=true" data-i18n-placeholder="placeholder_plateau"></div>
+      <p class="hint" data-i18n="day_profile_saved_note">Бележката се записва, когато избереш профил.</p>
       <div id="dp-recent" class="dp-recent"></div>
     </section>
 
     <section class="view" id="history-sec">
-      <div class="view-head"><h2>История</h2></div>
+      <div class="view-head"><h2 data-i18n="history_title">История</h2></div>
       <div id="history"></div>
     </section>
 
     <section class="tool" id="more">
-      <div class="view-head"><h2>Настройки</h2></div>
+      <div class="view-head"><h2 data-i18n="settings">Настройки</h2></div>
       <div class="setting">
-        <label for="xe-grams-input">Грамове въглехидрати на 1 XE <span>(препоръка на д-р Москова: 15г)</span></label>
+        <label for="xe-grams-input"><span data-i18n="xe_grams_label">Грамове въглехидрати на 1 XE</span> <span data-i18n="quick_dr_note">(препоръка на д-р Москова: 15г)</span></label>
         <div class="actions">
           <input type="number" id="xe-grams-input" step="0.5" min="1" max="99" placeholder="12" inputmode="decimal">
-          <button class="btn secondary" onclick="saveSettings()">Запази</button>
+          <button class="btn secondary" onclick="saveSettings()" data-i18n="meal_save_settings">Запази</button>
           <span id="settings-status" style="font-size:13px;color:var(--muted)" role="status"></span>
         </div>
       </div>
       <div class="setting" id="tz-block">
-        <label for="tz-select">Часова зона за дневните статистики и отчети</label>
-        <p class="hint" style="margin-bottom:8px">Определя къде свършва денят. Часовете, които виждаш и въвеждаш, следват устройството.</p>
+        <label for="tz-select" data-i18n="tz_label">Часова зона за дневните статистики и отчети</label>
+        <p class="hint" style="margin-bottom:8px" data-i18n="tz_note">Определя къде свършва денят. Часовете, които виждаш и въвеждаш, следват устройството.</p>
         <div class="actions">
           <select id="tz-select"></select>
-          <button class="btn secondary" onclick="saveTimezone()">Запази</button>
-          <button class="btn secondary" onclick="resetTimezone()" title="Връща стойността по подразбиране на сървъра">По подразбиране</button>
+          <button class="btn secondary" onclick="saveTimezone()" data-i18n="meal_save_settings">Запази</button>
+          <button class="btn secondary" onclick="resetTimezone()" title="Връща стойността по подразбиране на сървъра" data-i18n-title="tooltip_reset_tz" data-i18n="profile_normal">По подразбиране</button>
         </div>
         <div id="tz-status" class="status-line"></div>
       </div>
     </section>
 
     <section class="tool" id="data">
-      <div class="view-head"><h2>Данни</h2></div>
+      <div class="view-head"><h2 data-i18n="nav_data">Данни</h2></div>
       <div class="data-group">
         <div class="row">
-          <div class="field"><label for="exp-from">CSV от дата</label><input type="date" id="exp-from" title="От дата (празно = от началото)"></div>
-          <div class="field"><label for="exp-to">до дата</label><input type="date" id="exp-to" title="До дата (празно = до днес)"></div>
+          <div class="field"><label for="exp-from" data-i18n="csv_from">CSV от дата</label><input type="date" id="exp-from" title="От дата (празно = от началото)" data-i18n-title="csv_from_title"></div>
+          <div class="field"><label for="exp-to" data-i18n="to_date">до дата</label><input type="date" id="exp-to" title="До дата (празно = до днес)" data-i18n-title="csv_to_title"></div>
           <div class="field"><button class="btn secondary" style="width:100%" onclick="exportCSV()">Export CSV</button></div>
         </div>
-        <p class="hint" style="margin-top:8px">Празни дати означават всички записи.</p>
+        <p class="hint" style="margin-top:8px" data-i18n="chart_dates_empty">Празни дати означават всички записи.</p>
       </div>
       <div class="data-group actions">
         <button class="btn secondary" onclick="exportJSON()">Export JSON</button>
         <button class="btn secondary" onclick="document.getElementById('import-file').click()">Import JSON</button>
-        <button class="btn secondary" onclick="logout()" id="logout-btn" style="display:none">Изход</button>
+        <button class="btn secondary" onclick="logout()" id="logout-btn" style="display:none" data-i18n="logout">Изход</button>
         <button class="btn secondary" onclick="setApiKey()" id="apikey-btn">API Key...</button>
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJSON(event)">
       </div>
       <div class="data-group actions">
-        <button class="btn danger" onclick="clearAll()">Изтрий всичко</button>
+        <button class="btn danger" onclick="clearAll()" data-i18n="delete_all">Изтрий всичко</button>
       </div>
     </section>
 
@@ -1053,11 +1053,11 @@
 
 </div>
 
-<nav class="tabbar" aria-label="Раздели">
-  <a href="#now">Сега</a>
-  <a href="#entry">Запис</a>
-  <a href="#chart-sec">График</a>
-  <a href="#history-sec">История</a>
+<nav class="tabbar" aria-label="Раздели" data-i18n-aria="aria_sections">
+  <a href="#now" data-i18n="now">Сега</a>
+  <a href="#entry" data-i18n="tab_entry">Запис</a>
+  <a href="#chart-sec" data-i18n="chart_heading">График</a>
+  <a href="#history-sec" data-i18n="history_title">История</a>
   <a href="#more" data-i18n="nav_history">Още</a>
 </nav>
 
@@ -1221,7 +1221,7 @@ function setToken(t) { localStorage.setItem('diabet_token', t); }
 function clearToken() { localStorage.removeItem('diabet_token'); }
 function getApiKey() { return localStorage.getItem('diabet_api_key') || ''; }
 function setApiKey() {
-  const k = prompt('API Key (празно = без API key):', getApiKey());
+  const k = prompt(t('prompt_api_key'), getApiKey());
   if (k === null) return;
   localStorage.setItem('diabet_api_key', k);
   reload();
@@ -1279,7 +1279,7 @@ async function doLogin() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    if (!res.ok) throw new Error((await res.json()).detail || 'грешка');
+    if (!res.ok) throw new Error((await res.json()).detail || t('error_generic'));
     const data = await res.json();
     setToken(data.token);
     document.getElementById('login-pass').value = '';
@@ -1326,7 +1326,7 @@ function readDatetime(type) {
 }
 function fmtTime(iso) {
   const d = new Date(iso);
-  return d.toLocaleString('bg-BG', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleString(uiLocale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 }
 function bgClass(v) {
   if (v < 3.0) return 'very-low';
@@ -1348,10 +1348,11 @@ function bgColor(v) {
   return 'var(--ok)';
 }
 
-function setStatus(ok, text) {
+function setStatus(ok, key, params) {
+  _statusState = { ok, key, params };
   const el = document.getElementById('status');
   el.classList.toggle('online', ok);
-  document.getElementById('status-text').textContent = text;
+  document.getElementById('status-text').textContent = t(key, params);
 }
 
 async function loadSettings() {
@@ -1379,7 +1380,7 @@ async function saveSettings() {
     setTimeout(() => { statusEl.textContent = ''; }, 3000);
   } catch(e) {
     if (e.message !== 'Unauthorized') {
-      statusEl.textContent = 'Грешка: ' + e.message;
+      statusEl.textContent = t('toast_error') + e.message;
       statusEl.style.color = 'var(--danger)';
     }
   }
@@ -1396,16 +1397,17 @@ function toast(msg, isError = false) {
 // ============= DISPLAY HELPERS =============
 const r2 = x => Math.round(x * 100) / 100;   // 7.1 + 2.1 + 1.4 да не излиза 10.600000000000001
 
+function uiLocale() { return (typeof _lang === 'string' && _lang) || 'bg'; }
 function fmtClock(iso) {
-  return new Date(iso).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit' });
 }
 function fmtAge(ms) {
   const m = Math.round(ms / 60000);
   if (m < 1) return t('time_just_now');
-  if (m < 60) return `преди ${m} мин`;
+  if (m < 60) return t('time_min_ago', { m });
   const h = Math.floor(m / 60);
-  if (h < 24) return `преди ${h} ч ${m % 60} мин`;
-  return `преди ${Math.floor(h / 24)} дни`;
+  if (h < 24) return t('time_h_min_ago', { h, m: m % 60 });
+  return t('time_days_ago', { d: Math.floor(h / 24) });
 }
 
 // ============= DATE-TIME PICKERS =============
@@ -1415,11 +1417,11 @@ function buildPickers() {
   document.querySelectorAll('.dt-picker[data-dt]').forEach(box => {
     const p = box.dataset.dt;
     box.innerHTML = `
-      <input type="date" id="${p}-date" aria-label="Дата">
-      <input type="number" id="${p}-hour" min="0" max="23" class="dt-num" placeholder="ч" inputmode="numeric" aria-label="Час">
+      <input type="date" id="${p}-date" aria-label="${t('aria_date')}">
+      <input type="number" id="${p}-hour" min="0" max="23" class="dt-num" placeholder="${t('ph_hour_short')}" inputmode="numeric" aria-label="${t('aria_hour')}">
       <span class="dt-sep" aria-hidden="true">:</span>
-      <input type="number" id="${p}-min" min="0" max="59" class="dt-num" placeholder="м" inputmode="numeric" aria-label="Минути">
-      <button type="button" class="dt-now" aria-pressed="true" title="Часът следва часовника, докато не го промениш">Сега</button>`;
+      <input type="number" id="${p}-min" min="0" max="59" class="dt-num" placeholder="${t('ph_min_short')}" inputmode="numeric" aria-label="${t('aria_minutes')}">
+      <button type="button" class="dt-now" aria-pressed="true" title="${t('meal_time_note')}">${t('now')}</button>`;
     box.addEventListener('input', () => markPicker(p, true));
     box.querySelector('.dt-now').addEventListener('click', () => setNowInto(p));
   });
@@ -1456,7 +1458,7 @@ function toggleQuick(name) {
 function updateQuickTotals() {
   const num = id => parseFloat(document.getElementById(id).value) || 0;
   const xeG = num('xe-grams-input') || 12;
-  const line = g => g > 0 ? `Общо ${r2(g)} g, това са ${r2(g / xeG)} XE` : '';
+  const line = g => g > 0 ? t('meal_total_xe', { g: r2(g), xe: r2(g / xeG) }) : '';
   document.getElementById('hypo-total').textContent = line(num('hypo-g') * (parseInt(document.getElementById('hypo-n').value, 10) || 0));
   document.getElementById('nk-total').textContent = line(num('nk-fast-g') + num('nk-slow-g'));
 }
@@ -1551,7 +1553,7 @@ async function addHypo() {
     document.getElementById('hypo-notes').value = '';
     setNowInto('hypo');
     await reload();
-    toast(`Записано: ${grams} g (${payload.value} XE)`);
+    toast(t('toast_saved_g_xe', { g: grams, xe: payload.value }));
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -1571,7 +1573,7 @@ async function addCig() {
     document.getElementById('cig-n').value = '1';
     setNowInto('cig');
     await reload();
-    toast(`Записано: ${n} цигар${n === 1 ? 'а' : 'и'}`);
+    toast(t(n === 1 ? 'toast_saved_cig_one' : 'toast_saved_cig_many', { n }));
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -1595,7 +1597,7 @@ async function addNightKit() {
     document.getElementById('nk-notes').value = '';
     setNowInto('nk');
     await reload();
-    toast(`Записано: ${total} g (${payload.value} XE)`);
+    toast(t('toast_saved_g_xe', { g: total, xe: payload.value }));
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -1606,8 +1608,10 @@ async function addPeriod() {
   const endDate = document.getElementById('period-end-date').value;
   if (!startDate) { toast(t('toast_start_required'), true); return; }
   const extra = document.getElementById('period-notes').value.trim();
+  // Persisted in the entry's notes (data, matched later) — intentionally NOT translated
   const periodLabels = { hospital: 'Болница', travel: 'Пътуване', sick: 'Болест', stress: 'Стрес', exercise: 'Активен ден', other: 'Друго' };
   const label = periodLabels[ptype] || ptype;
+  const labelUi = t('period_' + ptype) || ptype;
   const payload = {
     type: 'device_change', value: 0,
     time: new Date(startDate + 'T00:00:00').toISOString(),
@@ -1620,7 +1624,7 @@ async function addPeriod() {
     document.getElementById('period-start-date').value = '';
     document.getElementById('period-end-date').value = '';
     await reload();
-    toast('Записано: ' + label + ' от ' + startDate + (endDate ? ' до ' + endDate : ''));
+    toast(endDate ? t('toast_period_saved_to', { label: labelUi, start: startDate, end: endDate }) : t('toast_period_saved', { label: labelUi, start: startDate }));
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -1641,7 +1645,7 @@ async function addTempBasal() {
     document.getElementById('tb-notes').value = '';
     setNowInto('tb');
     await reload();
-    toast('Записано: темп базал ' + pct + '% за ' + dur + ' мин');
+    toast(t('toast_temp_basal_saved', { pct, dur }));
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -1661,7 +1665,7 @@ async function addQuickBolus() {
     document.getElementById('qb-notes').value = '';
     setNowInto('qb');
     await reload();
-    toast('Записано: болус ' + units + ' U');
+    toast(t('toast_bolus_saved', { units }));
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -1680,7 +1684,7 @@ async function addSuspend() {
     document.getElementById('susp-notes').value = '';
     setNowInto('susp');
     await reload();
-    toast('Записано: спиране за ' + dur + ' мин');
+    toast(t('toast_suspend_saved', { dur }));
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -1697,7 +1701,7 @@ async function addResume() {
     document.getElementById('resume-notes').value = '';
     setNowInto('resume');
     await reload();
-    toast('Записано: базал възобновен');
+    toast(t('toast_resume_saved'));
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -1746,13 +1750,13 @@ async function reload() {
   try {
     entries = await api(entriesPath());
     await loadDayProfiles();
-    setStatus(true, t("status_online", {n: entries.length}));
+    setStatus(true, 'status_online', { n: entries.length });
     await loadStats();
     render();
     loadDayPanel();
   } catch(e) {
     if (e.message !== 'Unauthorized') {
-      setStatus(false, t('status_offline'));
+      setStatus(false, 'status_offline');
       toast(t('toast_error') + e.message, true);
     }
   }
@@ -1775,7 +1779,7 @@ function rulerPos(v) {
 function rulerHtml(v) {
   const ticks = [3.9, 10, 13.9].map(t => `<span class="ruler-tick" style="left:${rulerPos(t)}%">${t}</span>`).join('');
   const mark = v == null ? '' : `<span class="ruler-mark" style="left:${rulerPos(v)}%;background:${bgColor(v)}"></span>`;
-  return `<div class="ruler" role="img" aria-label="Скала от ${RULER.min} до ${RULER.max} mmol/L, целеви диапазон 3.9–10">
+  return `<div class="ruler" role="img" aria-label="${t('aria_ruler', { min: RULER.min, max: RULER.max })}">
       <div class="ruler-track"><span class="ruler-band" style="left:${rulerPos(3.9)}%;width:${rulerPos(10) - rulerPos(3.9)}%"></span>${mark}</div>
       <div class="ruler-ticks">${ticks}</div>
     </div>`;
@@ -1805,12 +1809,12 @@ function renderStats() {
       <div class="reading${stale ? ' stale' : ''}">
         <div class="reading-row">
           <span class="reading-value" style="color:${bgColor(latest.value)}">${Number(latest.value).toFixed(1)}</span>
-          ${tr ? `<span class="reading-trend${tr.fast ? ' fast' : ''}" title="CGM, последните ~15 мин">${tr.arrow}</span>` : ''}
+          ${tr ? `<span class="reading-trend${tr.fast ? ' fast' : ''}" title="${t('cgm_tooltip')}">${tr.arrow}</span>` : ''}
         </div>
         <p class="reading-meta">
           <span>mmol/L</span>
-          ${tr ? `<span${tr.fast ? ' class="alert"' : ''} title="CGM, последните ~15 мин">${tr.rate > 0 ? '+' : ''}${tr.rate.toFixed(2)} на минута</span>` : ''}
-          <span${stale ? ' class="warn"' : ''}>${src} в ${fmtClock(latest.time)}, ${fmtAge(age)}</span>
+          ${tr ? `<span${tr.fast ? ' class="alert"' : ''} title="${t('cgm_tooltip')}">${tr.rate > 0 ? '+' : ''}${tr.rate.toFixed(2)} ${t('cgm_per_min')}</span>` : ''}
+          <span${stale ? ' class="warn"' : ''}>${src} ${t('at_time')} ${fmtClock(latest.time)}, ${fmtAge(age)}</span>
         </p>
         ${rulerHtml(latest.value)}
       </div>`;
@@ -1818,7 +1822,7 @@ function renderStats() {
     reading = `
       <div class="reading">
         <div class="reading-row"><span class="reading-value none">—</span></div>
-        <p class="reading-meta"><span>Няма измервания за избрания период и източник.</span></p>
+        <p class="reading-meta"><span>${t('history_no_bg')}</span></p>
         ${rulerHtml(null)}
       </div>`;
   }
@@ -1830,8 +1834,8 @@ function renderStats() {
     ${reading}
     <dl class="readouts">
       ${readout(t('avg_24h'), avg24, 'mmol/L')}
-      ${(statsData && statsData.gmi_pct != null) ? readout(t('gmi_label'), statsData.gmi_pct, `% за ${statsData.days} д`) : ''}
-      ${readout(t('fast_4h'), r2(f4.units), 'U' + (f4.last ? `, последно ${fmtClock(f4.last)}` : ''), 'var(--fast)')}
+      ${(statsData && statsData.gmi_pct != null) ? readout(t('gmi_label'), statsData.gmi_pct, t('gmi_days', { n: statsData.days })) : ''}
+      ${readout(t('fast_4h'), r2(f4.units), 'U' + (f4.last ? `, ${t('last_dose')} ${fmtClock(f4.last)}` : ''), 'var(--fast)')}
       ${readout(t('fast_24h'), fast24, 'U', 'var(--fast)')}
       ${readout(t('slow_24h'), slow24, 'U', 'var(--slow)')}
       ${latestKetones ? readout(t('last_ketones'), latestKetones.value, 'mmol/L',
@@ -1843,7 +1847,7 @@ function renderStats() {
 function renderTIR() {
   const el = document.getElementById('tir-content');
   if (!statsData || statsData.bg_count === 0) {
-    el.innerHTML = '<div class="empty">Няма измервания на захарта за този период.</div>';
+    el.innerHTML = '<div class="empty">' + t('history_no_bg_period') + '</div>';
     return;
   }
   const p = statsData.tir_pct;
@@ -1870,18 +1874,18 @@ function renderTIR() {
     <div class="tir-bar">${bar}</div>
     <ul class="tir-legend">${legend}</ul>
     <dl class="facts">
-      <div><dt>Средна захар</dt><dd>${statsData.mean_bg} <small>mmol/L</small></dd></div>
+      <div><dt>${t('stats_avg')}</dt><dd>${statsData.mean_bg} <small>mmol/L</small></dd></div>
       <div><dt>SD</dt><dd>${statsData.std_bg}</dd></div>
-      <div><dt>CV <small>(цел под 36%)</small></dt><dd style="color:${cv<36?'var(--ok)':'var(--high)'}">${cv}%</dd></div>
+      <div><dt>CV <small>${t('stats_hba1c_target')}</small></dt><dd style="color:${cv<36?'var(--ok)':'var(--high)'}">${cv}%</dd></div>
       <div><dt>GMI</dt><dd>${statsData.gmi_pct}%</dd></div>
-      <div><dt>Измервания</dt><dd>${statsData.bg_count}</dd></div>
-      <div><dt>Бърз на ден</dt><dd style="color:var(--fast)">${statsData.insulin_total.daily_avg_fast} U</dd></div>
-      <div><dt>Бавен на ден</dt><dd style="color:var(--slow)">${statsData.insulin_total.daily_avg_slow} U</dd></div>
+      <div><dt>${t('stats_readings')}</dt><dd>${statsData.bg_count}</dd></div>
+      <div><dt>${t('stats_fast_day')}</dt><dd style="color:var(--fast)">${statsData.insulin_total.daily_avg_fast} U</dd></div>
+      <div><dt>${t('stats_slow_day')}</dt><dd style="color:var(--slow)">${statsData.insulin_total.daily_avg_slow} U</dd></div>
     </dl>
     <p class="tir-goals">
-      Цели: <strong style="color:${targetOk?'var(--ok)':'var(--high)'}">в диапазон над 70%</strong>,
-      <strong style="color:${targetLow?'var(--ok)':'var(--danger)'}">ниски под 4%</strong>.
-      GMI е оценка (Bergenstal 2018) и не заменя лабораторно HbA1c.
+      ${t('stats_goals')} <strong style="color:${targetOk?'var(--ok)':'var(--high)'}">${t('stats_tir_target')}</strong>,
+      <strong style="color:${targetLow?'var(--ok)':'var(--danger)'}">${t('stats_low_target')}</strong>.
+      ${t('gmi_disclaimer')}
     </p>`;
 }
 
@@ -2055,7 +2059,7 @@ const tempBasalBands = {
 
 function renderChart() {
   if (typeof Chart === 'undefined') {   // библиотеката идва от CDN; без нея останалата страница продължава да работи
-    document.querySelector('.chart-wrap').innerHTML = '<div class="empty">Графиката не се зареди, защото няма връзка с cdn.jsdelivr.net.</div>';
+    document.querySelector('.chart-wrap').innerHTML = '<div class="empty">' + t('chart_no_cdn') + '</div>';
     return;
   }
   const d = buildChartData();
@@ -2104,7 +2108,7 @@ function renderChart() {
       plugins: {
         legend: { position: 'bottom', labels: { color: P.paper, usePointStyle: true, boxWidth: 8, boxHeight: 8, padding: 14 } },
         tooltip: { callbacks: {
-          title: (items) => new Date(items[0].parsed.x).toLocaleString('bg-BG'),
+          title: (items) => new Date(items[0].parsed.x).toLocaleString(uiLocale()),
           afterLabel: (item) => (item.raw && item.raw.n) ? item.raw.n : ''
         } },
         zoom: {
@@ -2133,7 +2137,7 @@ const HISTORY_LIMIT = 200;
 function dayHeader(day, dp, today, yesterday) {
   const esc = t => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const name = day === today ? t('today_comma') : day === yesterday ? t('yesterday_comma') : '';
-  return `<li class="log-day" onclick="openDayProfile('${day}')" tabindex="0" role="button" title="Отвори в „Дневен профил“">
+  return `<li class="log-day" onclick="openDayProfile('${day}')" tabindex="0" role="button" title="${t('tooltip_open_profile')}">
       <span class="log-day-name">${name}${day.slice(8)}.${day.slice(5, 7)}</span>
       ${dp ? `<span class="badge dp">${DP_LABEL[dp.profile] || dp.profile}</span><span class="log-day-note">${esc(dp.notes)}</span>` : ''}
     </li>`;
@@ -2144,7 +2148,7 @@ function renderHistory() {
   const all = sorted.slice(0, HISTORY_LIMIT);
   const box = document.getElementById('history');
   if (!all.length) {
-    box.innerHTML = '<div class="empty">Няма записи за избрания период. Първият се добавя от „Нов запис“.</div>';
+    box.innerHTML = '<div class="empty">' + t('history_no_entries') + '</div>';
     return;
   }
   const today = nowLocalParts().date, yesterday = shiftDay(today, -1);
@@ -2159,56 +2163,56 @@ function renderHistory() {
     let type, value, cls;
     if (e.type === 'bg') {
       const bsrc = e.meta && e.meta.source === 'hospital' ? ' 🏥' : '';
-      type = 'Захар'; value = `${Number(e.value).toFixed(1)} mmol/L${bsrc}`; cls = 'bg ' + bgClass(e.value);
+      type = t('type_bg'); value = `${Number(e.value).toFixed(1)} mmol/L${bsrc}`; cls = 'bg ' + bgClass(e.value);
     }
     else if (e.type === 'fast') {
       const fm = e.meta || {};
       const dlv = fm.delivery === 'pen' ? ' 🖊' : fm.delivery === 'iv' ? ' 💉' : '';
-      const bk = fm.bolus_kind === 'extended' ? ' удълж.' : fm.bolus_kind === 'combo' ? ' комбо' : '';
-      const bd = fm.bolus_duration_min ? ` ${fm.bolus_duration_min}м` : '';
-      type = 'Бърз'; value = `${e.value} U${dlv}${bk}${bd}`; cls = 'fast';
+      const bk = fm.bolus_kind === 'extended' ? ' ' + t('bolus_extended').toLowerCase() : fm.bolus_kind === 'combo' ? ' ' + t('bolus_combo').toLowerCase() : '';
+      const bd = fm.bolus_duration_min ? ` ${fm.bolus_duration_min} ${t('min_short')}` : '';
+      type = t('type_fast'); value = `${e.value} U${dlv}${bk}${bd}`; cls = 'fast';
     }
     else if (e.type === 'slow') {
       const sm = e.meta || {};
       const sdlv = sm.delivery === 'pump' ? ' ⚙' : sm.delivery === 'iv' ? ' 💉' : '';
-      type = 'Бавен'; value = `${e.value} U${sdlv}`; cls = 'slow';
+      type = t('type_slow'); value = `${e.value} U${sdlv}`; cls = 'slow';
     }
-    else if (e.type === 'ketones') { type = 'Кетони'; value = `${e.value} mmol/L`; cls = 'ketones ' + ketoneClass(e.value); }
+    else if (e.type === 'ketones') { type = t('type_ketones'); value = `${e.value} mmol/L`; cls = 'ketones ' + ketoneClass(e.value); }
     else if (e.type === 'meal') {
       const hypo = notes.startsWith('[ХИПО]');   // записано от „Ниска“ или „Нощен комплект“
-      type = hypo ? 'Ниска' : 'Хранене'; value = `${e.value} XE`; cls = hypo ? 'hypo' : 'meal';
+      type = hypo ? t('type_hypo') : t('type_meal'); value = `${e.value} XE`; cls = hypo ? 'hypo' : 'meal';
     }
     else if (e.type === 'activity') {
       const cig = notes.match(/^\[ЦИГАРА\]\s*(\d+)/);   // записано от „Цигара“
-      if (cig) { type = 'Цигара'; value = `${cig[1]} бр.`; cls = 'cig'; }
+      if (cig) { type = t('type_cig'); value = `${cig[1]} ${t('pcs')}`; cls = 'cig'; }
       else {
-        type = 'Активност';
-        const intensity = e.meta && e.meta.intensity ? ` (${({light:'лека',moderate:'умерена',intense:'интензивна'})[e.meta.intensity] || esc(e.meta.intensity)})` : '';
-        value = `${e.value} мин${intensity}`;
+        type = t('type_activity');
+        const intensity = e.meta && e.meta.intensity ? ` (${({light: t('intensity_light'), moderate: t('intensity_moderate'), intense: t('intensity_intense')})[e.meta.intensity] || esc(e.meta.intensity)})` : '';
+        value = `${e.value} ${t('min_short')}${intensity}`;
         cls = 'activity';
       }
     }
-    else if (e.type === 'alcohol') { type = 'Алкохол'; value = `${e.value} ед.`; cls = 'alcohol'; }
+    else if (e.type === 'alcohol') { type = t('type_alcohol'); value = `${e.value} ${t('units_short')}`; cls = 'alcohol'; }
     else if (e.type === 'device_change') {
-      type = 'Устройство';
-      const deviceLabels = { ampule: 'Ампула', sensor: 'Сензор', patch: 'Пач', pump_base: 'Основа помпа', settings_change: 'Настройки' };
+      type = t('type_device');
+      const deviceLabels = { ampule: t('device_short_ampule'), sensor: t('device_short_sensor'), patch: t('device_short_patch'), pump_base: t('device_pump_base'), settings_change: t('settings') };
       const dtLabel = e.meta && e.meta.device_type ? (deviceLabels[e.meta.device_type] || esc(e.meta.device_type)) : '—';
       // Patch details: filled, remaining, site
       const patchParts = [];
       if (e.meta && e.meta.device_type === 'patch') {
         if (e.meta.patch_filled_u != null) patchParts.push(e.meta.patch_filled_u + 'U');
-        if (e.meta.patch_remaining_u != null) patchParts.push('ост. ' + e.meta.patch_remaining_u + 'U');
-        const siteLabels = { 'abdomen-L': 'корем Л', 'abdomen-R': 'корем Д', 'arm-L': 'ръка Л', 'arm-R': 'ръка Д', 'leg-L': 'крак Л', 'leg-R': 'крак Д', 'back-L': 'гръб Л', 'back-R': 'гръб Д' };
+        if (e.meta.patch_remaining_u != null) patchParts.push(t('remaining_short') + ' ' + e.meta.patch_remaining_u + 'U');
+        const siteLabels = { 'abdomen-L': t('site_abdomen_l'), 'abdomen-R': t('site_abdomen_r'), 'arm-L': t('site_arm_l'), 'arm-R': t('site_arm_r'), 'leg-L': t('site_leg_l'), 'leg-R': t('site_leg_r'), 'back-L': t('site_back_l'), 'back-R': t('site_back_r') };
         if (e.meta.patch_site) patchParts.push(siteLabels[e.meta.patch_site] || e.meta.patch_site);
       }
       // Temp basal details
       if (e.meta && e.meta.temp_basal_pct !== undefined) {
-        patchParts.push(e.meta.temp_basal_pct + '% / ' + (e.meta.temp_basal_min || '?') + ' мин');
+        patchParts.push(e.meta.temp_basal_pct + '% / ' + (e.meta.temp_basal_min || '?') + ' ' + t('min_short'));
       }
       if (e.meta && e.meta.resume) patchParts.push(t('resumed'));
       // Period tags
       if (e.meta && e.meta.device_type === 'period') {
-        const periodLabels = { hospital: '🏥 Болница', travel: '✈️ Пътуване', sick: '🤒 Болест', stress: '😰 Стрес', exercise: '🏃 Активен ден', other: '📌 Друго' };
+        const periodLabels = { hospital: t('period_hospital'), travel: t('period_travel'), sick: t('period_sick'), stress: t('period_stress'), exercise: t('period_exercise'), other: t('period_other') };
         patchParts.length = 0; // clear device label
         const pLabel = periodLabels[e.meta.period_type] || e.meta.period_type;
         patchParts.push(pLabel);
@@ -2223,19 +2227,19 @@ function renderHistory() {
     const notesEsc = notes.replace(/"/g, '&quot;').replace(/</g, '&lt;');
     const notesDisplay = notes
       ? `<span class="notes-text">${notesEsc}</span>`
-      : `<span class="notes-text notes-empty">＋ добави бележка</span>`;
+      : `<span class="notes-text notes-empty">${t('tooltip_add_note')}</span>`;
     // на тесен екран записите без бележка и чистите CGM показания остават на един ред
     const rowCls = (isCgm(e) ? ' cgm' : '') + (!notes || notes.trim() === '[CGM]' ? ' compact' : '');
     return head + `<li class="log-row${rowCls}">
         <time class="log-time" datetime="${e.time}" title="${fmtTime(e.time)}">${fmtClock(e.time)}</time>
         <span class="badge ${cls}">${type}</span>
         <strong class="log-value">${value}</strong>
-        <div class="notes-cell notes-editable" data-id="${e.id}" tabindex="0" role="button" title="Редактирай бележката">${notesDisplay}</div>
-        <button class="log-del" onclick="deleteEntry(${e.id})" aria-label="Изтрий записа" title="Изтрий записа">×</button>
+        <div class="notes-cell notes-editable" data-id="${e.id}" tabindex="0" role="button" title="${t('tooltip_edit_note')}">${notesDisplay}</div>
+        <button class="log-del" onclick="deleteEntry(${e.id})" aria-label="${t('tooltip_delete')}" title="${t('tooltip_delete')}">×</button>
       </li>`;
   }).join('');
   box.innerHTML = `<ul class="log">${rows}</ul>` +
-    (sorted.length > all.length ? `<p class="log-more">Показани са най-новите ${all.length} от ${sorted.length} записа за избрания период.</p>` : '');
+    (sorted.length > all.length ? `<p class="log-more">${t('history_showing_n', { n: all.length, total: sorted.length })}</p>` : '');
   // Wire up click-to-edit on all notes cells
   document.querySelectorAll('.notes-editable').forEach(cell => {
     cell.addEventListener('click', () => startEditNotes(cell));
@@ -2289,7 +2293,7 @@ function startEditNotes(cell) {
 function render() { renderStats(); renderChart(); renderHistory(); }
 
 // ============= DAY PROFILE (reference only) =============
-const DP_LABEL = { fast: '🚀 Бърз', normal: '⚖️ Нормален', slow: '🐢 Бавен' };
+const DP_LABEL = { get fast() { return t('fast_emoji'); }, get normal() { return t('normal_emoji'); }, get slow() { return t('slow_emoji'); } };
 
 function localDayOf(iso) {
   const d = new Date(iso);
@@ -2327,17 +2331,25 @@ function sgn(v) { return v === null || v === undefined ? '—' : (v > 0 ? '+' + 
 
 function renderDayResponse(r) {
   const el = document.getElementById('dp-response');
-  if (!r.dose) { el.innerHTML = '<span class="dim">Няма бърз инсулин за този ден.</span>'; return; }
-  const when = new Date(r.dose.time).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit' });
+  _lastDayResp = r;
+  if (!r.dose) { el.innerHTML = '<span class="dim">' + t('history_no_fast') + '</span>'; return; }
+  const when = new Date(r.dose.time).toLocaleTimeString(uiLocale(), { hour: '2-digit', minute: '2-digit' });
   const pts = r.points.map(p => p.bg === null
-    ? `след ${p.after_min / 60}ч: <span class="dim">няма показание</span>`
-    : `след ${p.after_min / 60}ч: <strong>${p.bg}</strong> (Δ ${sgn(p.delta)}${p.delta_per_unit !== null ? `, ${sgn(p.delta_per_unit)} на U` : ''})`
+    ? `${t('after_h', { h: p.after_min / 60 })} <span class="dim">${t('ketones_no_reading')}</span>`
+    : `${t('after_h', { h: p.after_min / 60 })} <strong>${p.bg}</strong> (Δ ${sgn(p.delta)}${p.delta_per_unit !== null ? `, ${sgn(p.delta_per_unit)} ${t('per_unit')}` : ''})`
   ).join(' · ');
   el.innerHTML =
-    `Първа бърза доза: <strong>${when}</strong> · <strong>${r.dose.units} U</strong>` +
-    (r.food_xe !== null ? ` · с храна ${r.food_xe} XE` : ' · без храна') +
-    `<br>BG при дозата: <strong>${r.bg_at_dose === null ? '—' : r.bg_at_dose}</strong> → ${pts}` +
-    `<br><span class="dim">${r.note}</span>`;
+    `${t('dose_first_fast')}: <strong>${when}</strong> · <strong>${r.dose.units} U</strong>` +
+    (r.food_xe !== null ? ` · ${t('dose_with_food')} ${r.food_xe} XE` : ' · ' + t('dose_no_food')) +
+    `<br>${t('dose_bg_at')}: <strong>${r.bg_at_dose === null ? '—' : r.bg_at_dose}</strong> → ${pts}` +
+    `<br><span class="dim">${t(r.food_xe !== null ? 'dose_note_with_food' : 'dose_note_no_food')}</span>`;
+}
+
+function renderDayRecent(profs) {
+  _lastDayProfs = profs;
+  document.getElementById('dp-recent').innerHTML = profs.length
+    ? t('profile_recent_days') + ' ' + profs.map(p => `${p.date.slice(8)}.${p.date.slice(5, 7)} ${DP_LABEL[p.profile] || p.profile}`).join(' · ')
+    : '';
 }
 
 async function loadDayPanel() {
@@ -2353,9 +2365,7 @@ async function loadDayPanel() {
       b.classList.toggle('active', !!cur && b.dataset.profile === cur.profile));
     const notesEl = document.getElementById('dp-notes');
     if (!dpDirty && document.activeElement !== notesEl) notesEl.value = cur ? cur.notes : '';
-    document.getElementById('dp-recent').innerHTML = profs.length
-      ? 'Последни дни: ' + profs.map(p => `${p.date.slice(8)}.${p.date.slice(5, 7)} ${DP_LABEL[p.profile] || p.profile}`).join(' · ')
-      : '';
+    renderDayRecent(profs);
   } catch (e) { /* silent — panel is optional (also if the backend is not patched yet) */ }
 }
 
@@ -2393,20 +2403,25 @@ async function clearDayProfile() {
 const TZ_FALLBACK = ['Europe/Sofia', 'Europe/Athens', 'Europe/Istanbul', 'Europe/London', 'Europe/Berlin', 'Europe/Bucharest',
   'Europe/Belgrade', 'Europe/Moscow', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Asia/Dubai', 'UTC'];
 
+function renderTimezoneStatus(tz) {
+  _lastTz = tz;
+  const device = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  document.getElementById('tz-status').innerHTML =
+    `${t('tz_server')} <strong>${tz.timezone}</strong>${tz.timezone === tz.default ? ' ' + t('tz_default') : ` ${t('tz_default')} ${tz.default}`} · ${t('tz_device')} ${device}` +
+    (device !== tz.timezone ? ' · <span style="color:var(--high)">' + t('tz_different_zones') + '</span>' : '');
+}
+
 async function loadTimezone() {
   const block = document.getElementById('tz-block');
   try {
-    const t = await api('/timezone');
+    const tz = await api('/timezone');
     const zones = (typeof Intl.supportedValuesOf === 'function') ? Intl.supportedValuesOf('timeZone') : TZ_FALLBACK.slice();
-    if (!zones.includes(t.timezone)) zones.unshift(t.timezone);
+    if (!zones.includes(tz.timezone)) zones.unshift(tz.timezone);
     if (!zones.includes('UTC')) zones.push('UTC');
     const sel = document.getElementById('tz-select');
     sel.innerHTML = zones.map(z => `<option value="${z}">${z}</option>`).join('');
-    sel.value = t.timezone;
-    const device = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    document.getElementById('tz-status').innerHTML =
-      `Сървър: <strong>${t.timezone}</strong>${t.timezone === t.default ? ' (по подразбиране)' : ` (по подразбиране ${t.default})`} · устройство: ${device}` +
-      (device !== t.timezone ? ' · <span style="color:var(--high)">различни зони: денят в отчетите и часовете на екрана може да не съвпадат</span>' : '');
+    sel.value = tz.timezone;
+    renderTimezoneStatus(tz);
     block.style.display = '';
   } catch (e) {
     block.style.display = 'none';  // backend without the timezone patch
@@ -2425,7 +2440,7 @@ async function saveTimezone() {
 async function resetTimezone() {
   try {
     await api('/timezone', { method: 'DELETE' });
-    toast('Върната е зоната по подразбиране');
+    toast(t('toast_tz_reset'));
     await loadTimezone();
     reload();
   } catch (e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
@@ -2441,7 +2456,7 @@ async function syncCgm() {
   btn.textContent = t('refreshing');
   try {
     const result = await api('/cgm-sync', { method: 'POST' });
-    toast(result.summary || 'CGM синхронизацията завърши');
+    toast(result.summary || t('toast_cgm_done'));
     await reload();
   } catch(e) {
     if (e.message !== 'Unauthorized') {
@@ -2477,12 +2492,12 @@ async function exportCSV() {
   const toV = document.getElementById('exp-to')?.value || '';
   const fromT = fromV ? new Date(fromV + 'T00:00:00').getTime() : -Infinity;
   const toT = toV ? new Date(toV + 'T23:59:59.999').getTime() : Infinity;
-  if (fromT > toT) { toast('„От“ е след „До“', true); return; }
+  if (fromT > toT) { toast(t('toast_from_after_to'), true); return; }
   const rows = [['type','time_utc','time_local','value','unit','notes','carbs_g','meal_time','meta']];
   for (const type of ['bg','fast','slow','ketones','meal','activity','alcohol','device_change']) {
     (data[type] || []).filter(e => { const t = new Date(e.time).getTime(); return t >= fromT && t <= toT; }).forEach(e => {
-      const unit = ({ bg: 'mmol/L', ketones: 'mmol/L', meal: 'XE', fast: 'U', slow: 'U', activity: 'min', alcohol: 'бр.' })[type] || '';
-      const localTime = new Date(e.time).toLocaleString('bg-BG');
+      const unit = ({ bg: 'mmol/L', ketones: 'mmol/L', meal: 'XE', fast: 'U', slow: 'U', activity: 'min', alcohol: t('pcs') })[type] || '';
+      const localTime = new Date(e.time).toLocaleString(uiLocale());
       rows.push([type.toUpperCase(), e.time, localTime, e.value ?? e.units ?? '', unit, e.notes || '',
                  e.carbs_g ?? '', e.meal_time ?? '', e.meta ? JSON.stringify(e.meta) : '']);
     });
@@ -2502,21 +2517,21 @@ async function importJSON(ev) {
   reader.onload = async (e) => {
     try {
       const imported = JSON.parse(e.target.result);
-      const replace = confirm('OK = ЗАМЕНИ всички данни\nCancel = добави към съществуващите');
+      const replace = confirm(t('confirm_import_mode'));
       const res = await api('/import', {
         method: 'POST',
         body: JSON.stringify({ ...imported, replace })
       });
       await reload();
-      toast(`Импортирани: ${res.imported}`);
+      toast(t('toast_imported') + res.imported);
     } catch(err) { if (err.message !== 'Unauthorized') toast(t('toast_error') + err.message, true); }
   };
   reader.readAsText(file);
   ev.target.value = '';
 }
 async function clearAll() {
-  if (!confirm('Изтрий ВСИЧКИ данни на сървъра? Необратимо.')) return;
-  if (!confirm('Наистина ли?')) return;
+  if (!confirm(t('confirm_delete_all'))) return;
+  if (!confirm(t('confirm_sure'))) return;
   try {
     await api('/entries', { method: 'DELETE' });
     await reload();
@@ -2567,8 +2582,36 @@ document.querySelectorAll('.cgm-btn').forEach(btn => {
 document.getElementById('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 document.getElementById('login-user').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass').focus(); });
 
+// Language switch: re-render everything that was generated from t() (static markup is handled by i18n.js)
+let _lastDayResp = null, _lastDayProfs = null, _lastTz = null, _statusState = { ok: false, key: 'cgm_connecting' };
+let _uiReady = false;   // set once INIT finished; the first 'langchange' belongs to INIT itself
+function relabelPickers() {   // labels only: rebuilding would wipe what the user already typed
+  document.querySelectorAll('.dt-picker[data-dt]').forEach(box => {
+    const set = (sel, attr, key) => { const el = box.querySelector(sel); if (el) el.setAttribute(attr, t(key)); };
+    set('input[type=date]', 'aria-label', 'aria_date');
+    set('.dt-num[id$="-hour"]', 'aria-label', 'aria_hour');
+    set('.dt-num[id$="-hour"]', 'placeholder', 'ph_hour_short');
+    set('.dt-num[id$="-min"]', 'aria-label', 'aria_minutes');
+    set('.dt-num[id$="-min"]', 'placeholder', 'ph_min_short');
+    const now = box.querySelector('.dt-now');
+    if (now) { now.textContent = t('now'); now.title = t('meal_time_note'); }
+  });
+}
+function refreshLangUi() {
+  relabelPickers();
+  updateQuickTotals();
+  setStatus(_statusState.ok, _statusState.key, _statusState.params);
+  render();
+  if (statsData) renderTIR();
+  if (_lastDayResp) renderDayResponse(_lastDayResp);
+  if (_lastDayProfs) renderDayRecent(_lastDayProfs);
+  if (_lastTz) renderTimezoneStatus(_lastTz);
+}
+document.addEventListener('langchange', () => { if (_uiReady) refreshLangUi(); });
+
 // ============= INIT =============
 (async () => {
+  await i18nReady();   // dictionary first: nothing below may generate text before t() works
   buildPickers();
   // Default period dates to today
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -2587,6 +2630,7 @@ document.getElementById('login-user').addEventListener('keydown', e => { if (e.k
     loadSettings().then(updateQuickTotals);
     loadTimezone();
   }
+  _uiReady = true;
 })();
 setInterval(() => {
   if (document.getElementById('login').style.display !== 'none' || editingNotes) return;

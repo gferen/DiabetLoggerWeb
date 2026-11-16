@@ -4,7 +4,8 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩸</text></svg>">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Глюкоза - CGM + Ръчни</title>
+<script src="/static/i18n.js"></script>
+<title data-i18n="cgm_view_title">Глюкоза - CGM + Ръчни</title>
 <style>
   body {
     background: #0a0a0a;
@@ -78,13 +79,13 @@
 </head>
 <body>
 
-<h1>Глюкоза - CGM + Ръчни измервания</h1>
-<div class="sub" id="range-label">Зареждане...</div>
+<h1 data-i18n="cgm_view_heading">Глюкоза - CGM + Ръчни измервания</h1>
+<div class="sub" id="range-label" data-i18n="meal_loading">Зареждане...</div>
 
 <div class="stats">
-  <div class="stat"><div class="label">Мин</div><div class="value minv" id="stat-min">-</div></div>
-  <div class="stat"><div class="label">Средно</div><div class="value avgv" id="stat-avg">-</div></div>
-  <div class="stat"><div class="label">Макс</div><div class="value maxv" id="stat-max">-</div></div>
+  <div class="stat"><div class="label" data-i18n="report_min">Мин</div><div class="value minv" id="stat-min">-</div></div>
+  <div class="stat"><div class="label" data-i18n="report_mean">Средно</div><div class="value avgv" id="stat-avg">-</div></div>
+  <div class="stat"><div class="label" data-i18n="report_max">Макс</div><div class="value maxv" id="stat-max">-</div></div>
 </div>
 
 <div class="toggles">
@@ -94,29 +95,29 @@
   </label>
   <label class="toggle-item">
     <input type="checkbox" id="showManual" checked>
-    <span class="dot-manual"></span> Ръчни измервания
+    <span class="dot-manual"></span> <span data-i18n="legend_manual">Ръчни измервания</span>
   </label>
 </div>
 
 <div>
   <select id="rangeSelect">
-    <option value="12">Последни 12 часа</option>
-    <option value="24" selected>Последни 24 часа</option>
-    <option value="72">Последни 3 дни</option>
-    <option value="168">Последни 7 дни</option>
-    <option value="whole">Целия наличен период</option>
-    <option value="custom">Избери период...</option>
+    <option value="12" data-i18n="range_12h">Последни 12 часа</option>
+    <option value="24" selected data-i18n="range_24h">Последни 24 часа</option>
+    <option value="72" data-i18n="print_preset_3">Последни 3 дни</option>
+    <option value="168" data-i18n="report_preset_7">Последни 7 дни</option>
+    <option value="whole" data-i18n="range_whole">Целия наличен период</option>
+    <option value="custom" data-i18n="range_custom">Избери период...</option>
   </select>
-  <button onclick="loadData()">Обнови сега</button>
-  <button onclick="changeApiKey()">API ключ</button>
+  <button onclick="loadData()" data-i18n="refresh_now">Обнови сега</button>
+  <button onclick="changeApiKey()" data-i18n="api_key">API ключ</button>
 </div>
 
 <div id="customRange" style="display:none; margin-bottom:12px;">
-  <label style="font-size:13px; color:#888; margin-right:6px;">От:</label>
+  <label style="font-size:13px; color:#888; margin-right:6px;" data-i18n="date_from_colon">От:</label>
   <input type="datetime-local" id="dateFrom">
-  <label style="font-size:13px; color:#888; margin-right:6px;">До:</label>
+  <label style="font-size:13px; color:#888; margin-right:6px;" data-i18n="date_to_colon">До:</label>
   <input type="datetime-local" id="dateTo">
-  <button onclick="loadData()">Приложи</button>
+  <button onclick="loadData()" data-i18n="apply">Приложи</button>
 </div>
 
 <div id="chart-wrap">
@@ -137,6 +138,9 @@ const API_BASE = window.location.origin;
 let authFailed = false;   // set after a 401 so the 60 s refresh stops until the user fixes the key
 let promptedOnce = false; // ask for the key automatically only once per page load
 
+let statusFn = null;   // keeps the status line re-renderable when the language changes
+function setStatusText(fn) { statusFn = fn; document.getElementById('status').textContent = fn(); }
+
 function getApiKey() { return localStorage.getItem('diabet_api_key') || ''; }
 
 function authHeaders() {
@@ -149,7 +153,7 @@ function authHeaders() {
 }
 
 function askApiKey() {
-  const k = prompt('API ключ (пази се само в този браузър):', getApiKey());
+  const k = prompt(t('prompt_api_key_local'), getApiKey());
   if (k === null) return false;
   localStorage.setItem('diabet_api_key', k.trim());
   return true;
@@ -173,7 +177,7 @@ async function loadData() {
     const fromVal = document.getElementById('dateFrom').value;
     const toVal = document.getElementById('dateTo').value;
     if (!fromVal || !toVal) {
-      document.getElementById('status').textContent = 'Избери и двете дати';
+      setStatusText(() => t('toast_pick_both_dates'));
       return;
     }
     cutoff = new Date(fromVal).getTime();
@@ -187,7 +191,7 @@ async function loadData() {
     cutoff = Date.now() - hours * 3600 * 1000;
   }
 
-  document.getElementById('status').textContent = 'Зареждане...';
+  setStatusText(() => t('meal_loading'));
   try {
     const params = new URLSearchParams({ limit: '20000' });
     if (cutoff > 0) params.set('from', new Date(cutoff).toISOString());
@@ -202,7 +206,7 @@ async function loadData() {
         promptedOnce = true;
         if (askApiKey()) { authFailed = false; return loadData(); }
       }
-      throw new Error('нужен е валиден API ключ — натисни "API ключ"');
+      throw new Error(t('err_api_key_required'));
     }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -217,10 +221,10 @@ async function loadData() {
       .sort((a, b) => a.x - b.x);
 
     render();
-    document.getElementById('status').textContent =
-      'Последно обновено: ' + new Date().toLocaleTimeString('bg-BG') + ' (' + allEntries.length + ' записа)';
+    const updatedAt = new Date(), nEntries = allEntries.length;
+    setStatusText(() => t('last_updated', { time: updatedAt.toLocaleTimeString(_lang), n: nEntries }));
   } catch (e) {
-    document.getElementById('status').textContent = 'Грешка: ' + e.message;
+    setStatusText(() => t('toast_error') + e.message);
   }
 }
 
@@ -242,8 +246,8 @@ function render() {
   document.getElementById('stat-max').textContent = Math.max(...vals);
   document.getElementById('stat-avg').textContent = Math.round((vals.reduce((s,v)=>s+v,0)/vals.length)*10)/10;
 
-  const startLbl = new Date(visible[0].x).toLocaleString('bg-BG', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-  const endLbl = new Date(visible[visible.length-1].x).toLocaleString('bg-BG', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const startLbl = new Date(visible[0].x).toLocaleString(_lang, {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const endLbl = new Date(visible[visible.length-1].x).toLocaleString(_lang, {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   document.getElementById('range-label').textContent = startLbl + ' \u2192 ' + endLbl;
 
   const cgmPoints = allEntries.filter(p => p.cgm && showCgm);
@@ -276,7 +280,7 @@ function render() {
   }
   if (manualPoints.length > 0) {
     datasets.push({
-      label: 'Ръчни измервания',
+      label: t('legend_manual'),
       data: manualPoints.map(p => ({ x: p.x, y: p.y })),
       borderColor: '#ffb84a',
       backgroundColor: '#ffb84a',
@@ -297,7 +301,7 @@ function render() {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            title: (items) => new Date(items[0].parsed.x).toLocaleString('bg-BG')
+            title: (items) => new Date(items[0].parsed.x).toLocaleString(_lang)
           }
         }
       },
@@ -309,7 +313,7 @@ function render() {
             color: '#888',
             font: { size: 11 },
             callback: function(val) {
-              return new Date(val).toLocaleString('bg-BG', fmtOpts);
+              return new Date(val).toLocaleString(_lang, fmtOpts);
             }
           }
         },
@@ -334,7 +338,11 @@ document.getElementById('rangeSelect').addEventListener('change', function() {
 document.getElementById('showCgm').addEventListener('change', render);
 document.getElementById('showManual').addEventListener('change', render);
 
-loadData();
+document.addEventListener('langchange', () => {
+  if (statusFn) setStatusText(statusFn);
+  if (allEntries.length) render();
+});
+i18nReady().then(loadData);
 setInterval(() => {
   if (!authFailed && document.getElementById('rangeSelect').value !== 'custom') loadData();
 }, 60000);

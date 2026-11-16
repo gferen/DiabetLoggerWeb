@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/static/i18n.js"></script>
 <title>Профили — Diabet Logger</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩸</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -99,60 +100,60 @@
 <body>
 
 <div class="nav">
-  <a href="/">← Главна</a>
-  <a href="/meal">Хранене</a>
-  <a href="/static/report.html">Отчет</a>
+  <a href="/" data-i18n="prof_nav_home">← Главна</a>
+  <a href="/meal" data-i18n="nav_meal">Хранене</a>
+  <a href="/static/report.html" data-i18n="prof_nav_report">Отчет</a>
 </div>
 
-<h1>⚙️ Профили на помпата</h1>
-<p class="subtitle">Базал, ISF и CR — история на настройките</p>
+<h1>⚙️ <span data-i18n="prof_heading">Профили на помпата</span></h1>
+<p class="subtitle" data-i18n="prof_subtitle">Базал, ISF и CR — история на настройките</p>
 
 <div id="active-card" class="active-card" style="display:none">
-  <h3>▶ Активен профил</h3>
+  <h3 data-i18n="prof_active">▶ Активен профил</h3>
   <div class="name" id="active-name"></div>
   <div class="date" id="active-date"></div>
 </div>
 
 <div style="margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
-  <button class="btn primary" onclick="showForm()">＋ Нов профил</button>
-  <button class="btn" onclick="toggleCompare()">📊 Сравни</button>
+  <button class="btn primary" onclick="showForm()" data-i18n="prof_new_btn">＋ Нов профил</button>
+  <button class="btn" onclick="toggleCompare()" data-i18n="prof_compare_btn">📊 Сравни</button>
 </div>
 
 <div id="form-section" class="form-section">
-  <h3 id="form-title">Нов профил</h3>
+  <h3 id="form-title" data-i18n="prof_new_title">Нов профил</h3>
   <input type="hidden" id="edit-id" value="">
 
   <div class="form-row">
-    <div class="field" style="flex:1"><label for="prof-name">Име</label><input type="text" id="prof-name" placeholder="напр. Pattern A v3"></div>
-    <div class="field"><label for="prof-date">Активен от</label><input type="date" id="prof-date"></div>
+    <div class="field" style="flex:1"><label for="prof-name" data-i18n="prof_name">Име</label><input type="text" id="prof-name" placeholder="напр. Pattern A v3" data-i18n-placeholder="prof_ph_name"></div>
+    <div class="field"><label for="prof-date" data-i18n="prof_active_from">Активен от</label><input type="date" id="prof-date"></div>
   </div>
 
-  <h4 style="margin: 12px 0 8px; font-size: 14px; color: var(--ash);">Базал (U/h по часове)</h4>
+  <h4 style="margin: 12px 0 8px; font-size: 14px; color: var(--ash);" data-i18n="prof_basal_title">Базал (U/h по часове)</h4>
   <div class="basal-grid" id="basal-grid"></div>
 
   <h4 style="margin: 12px 0 8px; font-size: 14px; color: var(--ash);">ISF (mmol/L per U)</h4>
   <div class="segments" id="isf-segments"></div>
-  <button class="seg-add" onclick="addSegment('isf')">+ добави сегмент</button>
+  <button class="seg-add" onclick="addSegment('isf')" data-i18n="prof_add_segment">+ добави сегмент</button>
 
   <h4 style="margin: 12px 0 8px; font-size: 14px; color: var(--ash);">CR (g per U)</h4>
   <div class="segments" id="cr-segments"></div>
-  <button class="seg-add" onclick="addSegment('cr')">+ добави сегмент</button>
+  <button class="seg-add" onclick="addSegment('cr')" data-i18n="prof_add_segment">+ добави сегмент</button>
 
   <div class="form-row" style="margin-top: 12px;">
-    <div class="field" style="flex:1"><label for="prof-notes">Бележка</label><textarea id="prof-notes" rows="2" placeholder="промени спрямо предишния, причина…"></textarea></div>
+    <div class="field" style="flex:1"><label for="prof-notes" data-i18n="prof_note">Бележка</label><textarea id="prof-notes" rows="2" placeholder="промени спрямо предишния, причина…" data-i18n-placeholder="prof_ph_notes"></textarea></div>
   </div>
 
   <div style="display: flex; gap: 8px; margin-top: 12px;">
-    <button class="btn primary" onclick="saveProfile()">Запиши</button>
-    <button class="btn" onclick="hideForm()">Откажи</button>
+    <button class="btn primary" onclick="saveProfile()" data-i18n="save">Запиши</button>
+    <button class="btn" onclick="hideForm()" data-i18n="cancel">Откажи</button>
   </div>
 </div>
 
 <div id="compare-section" style="display:none; margin-bottom: 24px;">
-  <h3 style="margin-bottom: 12px;">📊 Сравнение</h3>
+  <h3 style="margin-bottom: 12px;" data-i18n="prof_comparison">📊 Сравнение</h3>
   <div class="form-row">
-    <div class="field"><label>Профил 1</label><select id="cmp1" onchange="renderCompare()"></select></div>
-    <div class="field"><label>Профил 2</label><select id="cmp2" onchange="renderCompare()"></select></div>
+    <div class="field"><label data-i18n="prof_profile_1">Профил 1</label><select id="cmp1" onchange="renderCompare()"></select></div>
+    <div class="field"><label data-i18n="prof_profile_2">Профил 2</label><select id="cmp2" onchange="renderCompare()"></select></div>
   </div>
   <div id="compare-body"></div>
 </div>
@@ -174,8 +175,8 @@ async function api(path, opts = {}) {
   if (tok) headers['Authorization'] = 'Bearer ' + tok;
   const res = await fetch(API + path, { ...opts, headers });
   if (!res.ok) {
-    const t = await res.text();
-    throw new Error(t || res.statusText);
+    const body = await res.text();
+    throw new Error(body || res.statusText);
   }
   return res.json();
 }
@@ -195,7 +196,7 @@ async function loadProfiles() {
     profiles = await api('/api/profiles');
     renderList();
     loadActive();
-  } catch(e) { toast('Грешка: ' + e.message, true); }
+  } catch(e) { toast(t('toast_error') + e.message, true); }
 }
 
 async function loadActive() {
@@ -204,7 +205,7 @@ async function loadActive() {
     const card = document.getElementById('active-card');
     if (data.active) {
       document.getElementById('active-name').textContent = data.active.name;
-      document.getElementById('active-date').textContent = 'от ' + data.active.active_from;
+      document.getElementById('active-date').textContent = t('prof_from_date', { date: data.active.active_from });
       card.style.display = 'block';
     } else {
       card.style.display = 'none';
@@ -219,7 +220,7 @@ function miniChart(basal) {
 
 function renderList() {
   const box = document.getElementById('profiles-list');
-  if (!profiles.length) { box.innerHTML = '<p style="color:var(--ash)">Няма записани профили.</p>'; return; }
+  if (!profiles.length) { box.innerHTML = '<p style="color:var(--ash)">' + t('prof_none') + '</p>'; return; }
   box.innerHTML = profiles.map(p => {
     const total = p.basal.reduce((a,b) => a+b, 0).toFixed(2);
     const isfStr = (p.isf||[]).map(s => s.value).join(' / ') || '—';
@@ -227,13 +228,13 @@ function renderList() {
     return `<div class="profile-card" id="pc-${p.id}">
       <div class="header">
         <span class="name">${esc(p.name)}</span>
-        <span class="date">от ${p.active_from}</span>
+        <span class="date">${t('prof_from_date', { date: p.active_from })}</span>
       </div>
       <div class="basal-mini">${miniChart(p.basal)}</div>
-      <div class="total">Базал: ${total} U/ден · ISF: ${isfStr} · CR: ${crStr}</div>
+      <div class="total">${t('prof_total_line', { total: total, isf: isfStr, cr: crStr })}</div>
       ${p.notes ? `<div class="notes">${esc(p.notes)}</div>` : ''}
       <div class="actions">
-        <button class="btn" onclick="editProfile(${p.id})">✏️ Редактирай</button>
+        <button class="btn" onclick="editProfile(${p.id})">${t('prof_edit_btn')}</button>
         <button class="btn danger" onclick="deleteProfile(${p.id}, '${esc(p.name)}')">🗑️</button>
       </div>
     </div>`;
@@ -257,7 +258,7 @@ function addSegment(type, from='00:00', value='') {
   const idx = box.children.length;
   const row = document.createElement('div');
   row.className = 'seg-row';
-  row.innerHTML = `<span class="seg-label">от</span><input type="time" value="${from}" class="seg-from"><span class="seg-label">→</span><input type="number" step="0.1" min="0" max="20" value="${value}" placeholder="${type==='isf'?'mmol/L/U':'g/U'}" class="seg-val" inputmode="decimal"><button class="seg-del" onclick="this.parentElement.remove()">×</button>`;
+  row.innerHTML = `<span class="seg-label" data-i18n="prof_seg_from">${t('prof_seg_from')}</span><input type="time" value="${from}" class="seg-from"><span class="seg-label">→</span><input type="number" step="0.1" min="0" max="20" value="${value}" placeholder="${type==='isf'?'mmol/L/U':'g/U'}" class="seg-val" inputmode="decimal"><button class="seg-del" onclick="this.parentElement.remove()">×</button>`;
   box.appendChild(row);
 }
 
@@ -271,7 +272,7 @@ function readSegments(type) {
 
 function showForm(profile) {
   const sec = document.getElementById('form-section');
-  document.getElementById('form-title').textContent = profile ? 'Редактирай: ' + profile.name : 'Нов профил';
+  document.getElementById('form-title').textContent = profile ? t('prof_edit_title', { name: profile.name }) : t('prof_new_title');
   document.getElementById('edit-id').value = profile ? profile.id : '';
   document.getElementById('prof-name').value = profile ? profile.name : '';
   document.getElementById('prof-date').value = profile ? profile.active_from : new Date().toISOString().slice(0,10);
@@ -313,8 +314,8 @@ async function saveProfile() {
   const id = document.getElementById('edit-id').value;
   const name = document.getElementById('prof-name').value.trim();
   const active_from = document.getElementById('prof-date').value;
-  if (!name) { toast('Име е задължително', true); return; }
-  if (!active_from) { toast('Дата е задължителна', true); return; }
+  if (!name) { toast(t('prof_name_required'), true); return; }
+  if (!active_from) { toast(t('prof_date_required'), true); return; }
 
   const basal = [];
   for (let h = 0; h < 24; h++) {
@@ -330,14 +331,14 @@ async function saveProfile() {
   try {
     if (id) {
       await api('/api/profiles/' + id, { method: 'PUT', body: JSON.stringify(payload) });
-      toast('Профилът е обновен');
+      toast(t('prof_updated'));
     } else {
       await api('/api/profiles', { method: 'POST', body: JSON.stringify(payload) });
-      toast('Профилът е записан');
+      toast(t('prof_saved'));
     }
     hideForm();
     await loadProfiles();
-  } catch(e) { toast('Грешка: ' + e.message, true); }
+  } catch(e) { toast(t('toast_error') + e.message, true); }
 }
 
 function editProfile(id) {
@@ -346,12 +347,12 @@ function editProfile(id) {
 }
 
 async function deleteProfile(id, name) {
-  if (!confirm('Изтрий профил „' + name + '"?')) return;
+  if (!confirm(t('prof_confirm_delete', { name: name }))) return;
   try {
     await api('/api/profiles/' + id, { method: 'DELETE' });
-    toast('Изтрит');
+    toast(t('prof_deleted'));
     await loadProfiles();
-  } catch(e) { toast('Грешка: ' + e.message, true); }
+  } catch(e) { toast(t('toast_error') + e.message, true); }
 }
 
 // === COMPARE ===
@@ -377,7 +378,7 @@ function renderCompare() {
   const p2 = profiles.find(p => p.id === id2);
   if (!p1 || !p2) return;
 
-  let html = '<table class="compare-table"><tr><th>Час</th><th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th><th>Δ</th></tr>';
+  let html = '<table class="compare-table"><tr><th>' + t('print_col_time') + '</th><th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th><th>Δ</th></tr>';
   for (let h = 0; h < 24; h++) {
     const v1 = p1.basal[h], v2 = p2.basal[h];
     const d = v2 - v1;
@@ -386,18 +387,18 @@ function renderCompare() {
   }
   const t1 = p1.basal.reduce((a,b)=>a+b,0), t2 = p2.basal.reduce((a,b)=>a+b,0);
   const dt = t2 - t1;
-  html += `<tr style="font-weight:bold"><td>Общо</td><td>${t1.toFixed(2)}</td><td>${t2.toFixed(2)}</td><td class="diff">${dt > 0 ? '+' : ''}${dt.toFixed(2)}</td></tr>`;
+  html += `<tr style="font-weight:bold"><td>${t('prof_total')}</td><td>${t1.toFixed(2)}</td><td>${t2.toFixed(2)}</td><td class="diff">${dt > 0 ? '+' : ''}${dt.toFixed(2)}</td></tr>`;
   html += '</table>';
 
   // ISF comparison
   if ((p1.isf && p1.isf.length) || (p2.isf && p2.isf.length)) {
     html += '<h4 style="margin:12px 0 6px;font-size:13px;color:var(--ash)">ISF</h4>';
-    html += '<table class="compare-table"><tr><th>От</th><th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th></tr>';
+    html += '<table class="compare-table"><tr><th>' + t('prof_col_from') + '</th><th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th></tr>';
     const allTimes = [...new Set([...(p1.isf||[]).map(s=>s.from), ...(p2.isf||[]).map(s=>s.from)])].sort();
-    for (const t of allTimes) {
-      const v1 = (p1.isf||[]).find(s=>s.from===t);
-      const v2 = (p2.isf||[]).find(s=>s.from===t);
-      html += `<tr><td>${t}</td><td>${v1 ? v1.value : '—'}</td><td>${v2 ? v2.value : '—'}</td></tr>`;
+    for (const tm of allTimes) {
+      const v1 = (p1.isf||[]).find(s=>s.from===tm);
+      const v2 = (p2.isf||[]).find(s=>s.from===tm);
+      html += `<tr><td>${tm}</td><td>${v1 ? v1.value : '—'}</td><td>${v2 ? v2.value : '—'}</td></tr>`;
     }
     html += '</table>';
   }
@@ -405,12 +406,12 @@ function renderCompare() {
   // CR comparison
   if ((p1.cr && p1.cr.length) || (p2.cr && p2.cr.length)) {
     html += '<h4 style="margin:12px 0 6px;font-size:13px;color:var(--ash)">CR</h4>';
-    html += '<table class="compare-table"><tr><th>От</th><th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th></tr>';
+    html += '<table class="compare-table"><tr><th>' + t('prof_col_from') + '</th><th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th></tr>';
     const allTimes = [...new Set([...(p1.cr||[]).map(s=>s.from), ...(p2.cr||[]).map(s=>s.from)])].sort();
-    for (const t of allTimes) {
-      const v1 = (p1.cr||[]).find(s=>s.from===t);
-      const v2 = (p2.cr||[]).find(s=>s.from===t);
-      html += `<tr><td>${t}</td><td>${v1 ? v1.value : '—'}</td><td>${v2 ? v2.value : '—'}</td></tr>`;
+    for (const tm of allTimes) {
+      const v1 = (p1.cr||[]).find(s=>s.from===tm);
+      const v2 = (p2.cr||[]).find(s=>s.from===tm);
+      html += `<tr><td>${tm}</td><td>${v1 ? v1.value : '—'}</td><td>${v2 ? v2.value : '—'}</td></tr>`;
     }
     html += '</table>';
   }
@@ -419,8 +420,29 @@ function renderCompare() {
 }
 
 // === INIT ===
-buildBasalGrid();
-loadProfiles();
+function updateFormTitle() {
+  const id = document.getElementById('edit-id').value;
+  const prof = id ? profiles.find(x => String(x.id) === id) : null;
+  document.getElementById('form-title').textContent = prof ? t('prof_edit_title', { name: prof.name }) : t('prof_new_title');
+}
+
+let i18nStarted = false;
+document.addEventListener('langchange', () => {
+  document.title = t('prof_page_title');
+  if (!i18nStarted) return;
+  updateFormTitle();
+  renderList();
+  loadActive();
+  if (document.getElementById('compare-section').style.display !== 'none') renderCompare();
+});
+
+(async () => {
+  await i18nReady();
+  document.title = t('prof_page_title');
+  i18nStarted = true;
+  buildBasalGrid();
+  loadProfiles();
+})();
 </script>
 </body>
 </html>

@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>За диетолог · Diabet Logger</title>
+<script src="/static/i18n.js"></script>
 <style>
   :root {
     --bg: #ffffff; --panel: #f8fafc; --panel-2: #eef2f7;
@@ -111,46 +112,46 @@
 <div id="login" class="login-overlay">
   <div class="login-box">
     <h2>🩸 Diabet Logger</h2>
-    <label>Потребител</label>
+    <label data-i18n="user">Потребител</label>
     <input type="text" id="login-user" autocomplete="username">
-    <label>Парола</label>
+    <label data-i18n="password">Парола</label>
     <input type="password" id="login-pass" autocomplete="current-password">
-    <button class="btn" style="width:100%" onclick="doLogin()">Вход</button>
+    <button class="btn" style="width:100%" onclick="doLogin()" data-i18n="login">Вход</button>
     <div class="login-error" id="login-error"></div>
   </div>
 </div>
 
-<h1>🩺 Преглед за диетолог</h1>
-<div class="subtitle" id="subtitle">Период: —</div>
+<h1>🩺 <span data-i18n="print_heading">Преглед за диетолог</span></h1>
+<div class="subtitle" id="subtitle" data-i18n="print_period_empty">Период: —</div>
 
 <div class="controls no-print">
   <div>
-    <label>От дата</label>
+    <label data-i18n="report_from_date">От дата</label>
     <input type="date" id="from-date">
   </div>
   <div>
-    <label>До дата</label>
+    <label data-i18n="report_to_date">До дата</label>
     <input type="date" id="to-date">
   </div>
   <div>
-    <label>Име (опц.)</label>
-    <input type="text" id="patient-name" placeholder="за принт" maxlength="80" oninput="onNameChange()">
+    <label data-i18n="print_name_opt">Име (опц.)</label>
+    <input type="text" id="patient-name" placeholder="за принт" data-i18n-placeholder="print_ph_print" maxlength="80" oninput="onNameChange()">
   </div>
-  <button class="btn" onclick="loadData()">Обнови</button>
-  <button class="btn secondary" onclick="window.print()">🖨 Печат / PDF</button>
-  <button class="btn secondary" onclick="window.location.href='/'">← Назад</button>
+  <button class="btn" onclick="loadData()" data-i18n="refresh">Обнови</button>
+  <button class="btn secondary" onclick="window.print()" data-i18n="report_print">🖨 Печат / PDF</button>
+  <button class="btn secondary" onclick="window.location.href='/'" data-i18n="report_back">← Назад</button>
   <div style="flex-basis: 100%">
     <div class="presets">
-      <button class="btn secondary" data-preset="3">Последни 3 дни</button>
-      <button class="btn secondary active" data-preset="5">Последни 5 дни</button>
-      <button class="btn secondary" data-preset="7">Последна седмица</button>
-      <button class="btn secondary" data-preset="14">Последни 2 седмици</button>
-      <button class="btn secondary" data-preset="30">Последен месец</button>
+      <button class="btn secondary" data-preset="3" data-i18n="print_preset_3">Последни 3 дни</button>
+      <button class="btn secondary active" data-preset="5" data-i18n="print_preset_5">Последни 5 дни</button>
+      <button class="btn secondary" data-preset="7" data-i18n="print_preset_7">Последна седмица</button>
+      <button class="btn secondary" data-preset="14" data-i18n="print_preset_14">Последни 2 седмици</button>
+      <button class="btn secondary" data-preset="30" data-i18n="report_preset_30">Последен месец</button>
     </div>
   </div>
 </div>
 
-<div id="content" class="loading">Зареждане...</div>
+<div id="content" class="loading" data-i18n="meal_loading">Зареждане...</div>
 
 <script>
 const API = '/api';
@@ -208,7 +209,7 @@ async function doLogin() {
     document.getElementById('login-pass').value = '';
     hideLogin();
     loadData();
-  } catch(e) { err.textContent = 'Грешен потребител или парола'; }
+  } catch(e) { err.textContent = t('login_error'); }
 }
 
 // ============= HELPERS =============
@@ -217,13 +218,13 @@ function isoDate(d) {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
 function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString('bg-BG', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return new Date(iso).toLocaleDateString(_lang, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 function fmtDayName(iso) {
-  return new Date(iso).toLocaleDateString('bg-BG', { weekday: 'long' });
+  return new Date(iso).toLocaleDateString(_lang, { weekday: 'long' });
 }
 function fmtTime(iso) {
-  return new Date(iso).toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return new Date(iso).toLocaleTimeString(_lang, { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 function bgClass(v) {
   if (v < 3.0) return 'very-low';
@@ -262,12 +263,19 @@ function updateHeaderName() {
 }
 
 // ============= LOAD DATA =============
+let lastData = null;
+function setPeriod() {
+  if (!lastData) return;
+  const el = document.getElementById('subtitle');
+  el.dataset.period = t('print_period', { from: fmtDate(lastData.from), to: fmtDate(lastData.to) });
+  updateHeaderName();
+}
 async function loadData() {
   const from = document.getElementById('from-date').value;
   const to = document.getElementById('to-date').value;
   if (!from || !to) return;
 
-  document.getElementById('content').innerHTML = '<div class="loading">Зареждане...</div>';
+  document.getElementById('content').innerHTML = '<div class="loading">' + t('meal_loading') + '</div>';
 
   try {
     const [entries, settings, reportData] = await Promise.all([
@@ -275,15 +283,14 @@ async function loadData() {
       api('/settings'),
       api(`/report?from=${from}&to=${to}`),
     ]);
+    lastData = { entries, settings, reportData, from, to };
     render(entries, settings, reportData, from, to);
 
     // Update header
-    const el = document.getElementById('subtitle');
-    el.dataset.period = `Период: ${fmtDate(from)} — ${fmtDate(to)}`;
-    updateHeaderName();
+    setPeriod();
   } catch(e) {
     if (e.message !== 'Unauthorized') {
-      document.getElementById('content').innerHTML = `<div class="empty">Грешка: ${e.message}</div>`;
+      document.getElementById('content').innerHTML = `<div class="empty">${t('toast_error')}${e.message}</div>`;
     }
   }
 }
@@ -298,13 +305,13 @@ function render(entries, settings, report, from, to) {
   ).join('');
   parts.push(`
     <div class="schema">
-      <strong>Текуща схема:</strong>
+      <strong>${t('print_schema_current')}</strong>
       I:C = <strong>${settings.ic_ratio_normal} U/XE</strong> (1 XE = ${settings.xe_grams_carbs}g) ·
-      target ден <strong>${settings.target_bg_low}–${settings.target_bg_high}</strong> / нощ <strong>${settings.target_bg_night_low}–${settings.target_bg_night_high}</strong> mmol/L ·
-      хипо праг: <strong>${settings.hypo_threshold}</strong> ·
-      вечерна старт. доза: <strong>${settings.evening_slow_dose} U</strong> (± ${settings.evening_dose_step} U/ден по сутрешна BG)
+      ${t('print_schema_target', { dlo: settings.target_bg_low, dhi: settings.target_bg_high, nlo: settings.target_bg_night_low, nhi: settings.target_bg_night_high })} ·
+      ${t('print_schema_hypo', { v: settings.hypo_threshold })} ·
+      ${t('print_schema_evening', { dose: settings.evening_slow_dose, step: settings.evening_dose_step })}
       <table style="display: inline-table; margin-left: 20px; vertical-align: middle;">
-        <thead><tr><th>BG (mmol/L)</th><th>Корекция</th></tr></thead>
+        <thead><tr><th>BG (mmol/L)</th><th>${t('print_correction')}</th></tr></thead>
         <tbody>${corrRows}</tbody>
       </table>
     </div>
@@ -316,14 +323,14 @@ function render(entries, settings, report, from, to) {
     parts.push(`
       <div class="summary">
         <div class="summary-grid">
-          <div class="summary-cell"><div class="label">Средна BG</div><div class="value">${report.bg_stats.mean ?? '—'}<span class="unit">mmol/L</span></div></div>
+          <div class="summary-cell"><div class="label">${t('report_mean_bg')}</div><div class="value">${report.bg_stats.mean ?? '—'}<span class="unit">mmol/L</span></div></div>
           <div class="summary-cell"><div class="label">GMI</div><div class="value">${report.bg_stats.gmi_pct ?? '—'}<span class="unit">%</span></div></div>
           <div class="summary-cell"><div class="label">CV</div><div class="value">${report.bg_stats.cv_pct ?? '—'}<span class="unit">%</span></div></div>
           <div class="summary-cell"><div class="label">TIR (3.9–10)</div><div class="value">${report.tir.pct.in_range}<span class="unit">%</span></div></div>
-          <div class="summary-cell"><div class="label">Хипо (<3.9)</div><div class="value" style="color:${(report.tir.pct.very_low+report.tir.pct.low)>4?'var(--danger)':'var(--text)'}">${(report.tir.pct.very_low+report.tir.pct.low).toFixed(1)}<span class="unit">%</span></div></div>
-          <div class="summary-cell"><div class="label">Общо XE</div><div class="value">${report.meals ? report.meals.xe_total : 0}<span class="unit">XE</span></div></div>
-          <div class="summary-cell"><div class="label">TDD/ден</div><div class="value">${report.insulin.tdd_per_active_day}<span class="unit">U</span></div></div>
-          <div class="summary-cell"><div class="label">Реален I:C</div><div class="value">${empIC ?? '—'}<span class="unit">U/XE</span></div></div>
+          <div class="summary-cell"><div class="label">${t('print_hypo_label')}</div><div class="value" style="color:${(report.tir.pct.very_low+report.tir.pct.low)>4?'var(--danger)':'var(--text)'}">${(report.tir.pct.very_low+report.tir.pct.low).toFixed(1)}<span class="unit">%</span></div></div>
+          <div class="summary-cell"><div class="label">${t('report_xe_total')}</div><div class="value">${report.meals ? report.meals.xe_total : 0}<span class="unit">XE</span></div></div>
+          <div class="summary-cell"><div class="label">${t('print_tdd_day')}</div><div class="value">${report.insulin.tdd_per_active_day}<span class="unit">U</span></div></div>
+          <div class="summary-cell"><div class="label">${t('report_real_ic')}</div><div class="value">${empIC ?? '—'}<span class="unit">U/XE</span></div></div>
         </div>
       </div>
     `);
@@ -334,7 +341,7 @@ function render(entries, settings, report, from, to) {
   const sorted = entries.slice().sort((a, b) => new Date(a.time) - new Date(b.time));
 
   if (!sorted.length) {
-    parts.push('<div class="empty">Няма записи в избрания период.</div>');
+    parts.push('<div class="empty">' + t('print_no_entries') + '</div>');
     document.getElementById('content').innerHTML = parts.join('');
     return;
   }
@@ -372,7 +379,7 @@ function render(entries, settings, report, from, to) {
 
     // Day-level stats
     const statsHtml = dayReport
-      ? `TDD ${dayReport.tdd || 0} U · XE ${dayReport.xe || 0} · BG ${dayReport.bg_count} измервания (${dayReport.bg_min ?? '—'}–${dayReport.bg_max ?? '—'})`
+      ? t('print_day_stats', { tdd: dayReport.tdd || 0, xe: dayReport.xe || 0, n: dayReport.bg_count, min: dayReport.bg_min ?? '—', max: dayReport.bg_max ?? '—' })
       : '';
 
     const dayName = fmtDayName(day);
@@ -476,15 +483,15 @@ function render(entries, settings, report, from, to) {
         <table class="events">
           <thead>
             <tr>
-              <th class="col-time">Час</th>
+              <th class="col-time">${t('print_col_time')}</th>
               <th class="col-icon"></th>
               <th class="col-bg">BG</th>
               <th class="col-xe">XE</th>
-              <th class="col-food">Храна / бележка</th>
-              <th class="col-fast">Бърз</th>
-              <th class="col-slow">Бавен</th>
-              <th class="col-ket">Кетони</th>
-              <th class="col-dietitian">Бележки на диетолога</th>
+              <th class="col-food">${t('print_col_food')}</th>
+              <th class="col-fast">${t('type_fast')}</th>
+              <th class="col-slow">${t('type_slow')}</th>
+              <th class="col-ket">${t('type_ketones')}</th>
+              <th class="col-dietitian">${t('print_col_dietitian')}</th>
             </tr>
           </thead>
           <tbody>
@@ -500,14 +507,14 @@ function render(entries, settings, report, from, to) {
   parts.push(`
     <div class="signatures">
       <div class="sig-block">
-        <div class="label">Пациент — подпис, дата</div>
+        <div class="label">${t('print_sig_patient')}</div>
       </div>
       <div class="sig-block">
-        <div class="label">Диетолог — подпис, дата</div>
+        <div class="label">${t('print_sig_dietitian')}</div>
       </div>
     </div>
     <div class="footer no-print">
-      Разпечатката е предназначена за преглед и бележки от диетолога. Цветното маркиране на BG следва Battelino 2019.
+      ${t('print_footer')}
     </div>
   `);
 
@@ -524,7 +531,17 @@ document.querySelectorAll('.presets .btn').forEach(b => {
 const savedName = localStorage.getItem('diabet_patient_name');
 if (savedName) document.getElementById('patient-name').value = savedName;
 
+document.addEventListener('langchange', () => {
+  document.title = t('nav_print') + ' · Diabet Logger';
+  if (lastData) {
+    render(lastData.entries, lastData.settings, lastData.reportData, lastData.from, lastData.to);
+    setPeriod();
+  }
+});
+
 (async () => {
+  await i18nReady();
+  document.title = t('nav_print') + ' · Diabet Logger';
   await checkAuth();
   if (authMode === 'login' && !getToken()) {
     showLogin();

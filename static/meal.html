@@ -4,6 +4,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩸</text></svg>">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="/static/i18n.js"></script>
 <title>Хранене · Diabet Logger</title>
 <style>
   :root {
@@ -85,75 +86,75 @@
 <div id="login" class="login-overlay">
   <div class="login-box">
     <h2>🩸 Diabet Logger</h2>
-    <label>Потребител</label>
+    <label data-i18n="user">Потребител</label>
     <input type="text" id="login-user" autocomplete="username">
-    <label>Парола</label>
+    <label data-i18n="password">Парола</label>
     <input type="password" id="login-pass" autocomplete="current-password">
-    <button class="btn" style="width:100%" onclick="doLogin()">Вход</button>
+    <button class="btn" style="width:100%" onclick="doLogin()" data-i18n="login">Вход</button>
     <div class="login-error" id="login-error"></div>
   </div>
 </div>
 
-<h1>🍽 Хранене
-  <a href="/" class="btn secondary" style="margin-left:auto;text-decoration:none;font-size:13px;padding:6px 12px">← Основно</a>
+<h1>🍽 <span data-i18n="nav_meal">Хранене</span>
+  <a href="/" class="btn secondary" style="margin-left:auto;text-decoration:none;font-size:13px;padding:6px 12px" data-i18n="meal_back">← Основно</a>
 </h1>
 
 <div class="tab-bar">
-  <div class="tab active" data-tab="meal">🍽 Хранене</div>
-  <div class="tab" data-tab="evening">🌙 Вечерна доза</div>
-  <div class="tab" data-tab="settings">⚙️ Настройки</div>
+  <div class="tab active" data-tab="meal">🍽 <span data-i18n="nav_meal">Хранене</span></div>
+  <div class="tab" data-tab="evening">🌙 <span data-i18n="meal_tab_evening">Вечерна доза</span></div>
+  <div class="tab" data-tab="settings">⚙️ <span data-i18n="settings">Настройки</span></div>
 </div>
 
 <!-- =============== MEAL TAB =============== -->
 <div class="tab-content active" data-tab="meal">
   <div class="panel">
-    <h2>Данни за храненето</h2>
+    <h2 data-i18n="meal_data_title">Данни за храненето</h2>
     <div class="row">
       <div>
-        <label>Дата и час</label>
+        <label data-i18n="datetime">Дата и час</label>
         <div class="dt-picker">
           <input type="date" id="m-date">
-          <input type="number" id="m-hour" min="0" max="23" class="dt-num" placeholder="ч">
+          <input type="number" id="m-hour" min="0" max="23" class="dt-num" placeholder="ч" data-i18n-placeholder="meal_ph_hour">
           <span class="dt-sep">:</span>
-          <input type="number" id="m-min" min="0" max="59" class="dt-num" placeholder="м">
+          <input type="number" id="m-min" min="0" max="59" class="dt-num" placeholder="м" data-i18n-placeholder="meal_ph_min">
         </div>
       </div>
     </div>
     <div class="row">
       <div>
-        <label>BG преди хранене (mmol/L)</label>
-        <input type="number" id="m-bg" step="0.1" min="1" max="30" placeholder="напр. 7.2" oninput="autoCalc()">
+        <label data-i18n="meal_bg_before">BG преди хранене (mmol/L)</label>
+        <input type="number" id="m-bg" step="0.1" min="1" max="30" placeholder="напр. 7.2" data-i18n-placeholder="meal_ph_eg_7_2" oninput="autoCalc()">
       </div>
       <div>
-        <label>XE (хлебни единици)</label>
-        <input type="number" id="m-xe" step="0.5" min="0" max="20" placeholder="напр. 3" oninput="autoCalc()">
+        <label data-i18n="meal_xe_label">XE (хлебни единици)</label>
+        <input type="number" id="m-xe" step="0.5" min="0" max="20" placeholder="напр. 3" data-i18n-placeholder="meal_ph_eg_3" oninput="autoCalc()">
         <div style="display:flex;gap:6px;margin-top:6px">
-          <button type="button" class="btn secondary" style="font-size:11px;padding:4px 10px" onclick="fillBeerXE(0.33)">🍺 0.33л</button>
-          <button type="button" class="btn secondary" style="font-size:11px;padding:4px 10px" onclick="fillBeerXE(0.5)">🍺 0.5л</button>
+          <button type="button" class="btn secondary" style="font-size:11px;padding:4px 10px" onclick="fillBeerXE(0.33)" data-i18n="meal_beer_033">🍺 0.33л</button>
+          <button type="button" class="btn secondary" style="font-size:11px;padding:4px 10px" onclick="fillBeerXE(0.5)" data-i18n="meal_beer_05">🍺 0.5л</button>
         </div>
       </div>
     </div>
     <div>
-      <label>Описание на храната</label>
-      <input type="text" id="m-food" placeholder="напр. 2 филии хляб + сирене, чай">
+      <label data-i18n="meal_food_desc">Описание на храната</label>
+      <input type="text" id="m-food" placeholder="напр. 2 филии хляб + сирене, чай" data-i18n-placeholder="meal_ph_food">
     </div>
 
     <div id="calc-result" class="calc-result" style="display:none"></div>
 
     <div class="override-block" id="override-block" style="display:none">
       <label>
-        <input type="checkbox" id="m-override-chk" onchange="toggleOverride()"> Ръчна доза (override препоръката)
+        <input type="checkbox" id="m-override-chk" onchange="toggleOverride()"> <span data-i18n="meal_override_label">Ръчна доза (override препоръката)</span>
       </label>
       <div id="m-override-input-wrap" style="display:none;margin-top:8px">
-        <input type="number" id="m-override" step="0.5" min="0" max="50" placeholder="колко единици бърз да инжектираш">
+        <input type="number" id="m-override" step="0.5" min="0" max="50" placeholder="колко единици бърз да инжектираш" data-i18n-placeholder="meal_ph_override">
       </div>
     </div>
 
     <div class="actions">
-      <button class="btn big" id="m-save-btn" onclick="saveMeal()" disabled>Запиши: BG + XE + бърз инсулин</button>
+      <button class="btn big" id="m-save-btn" onclick="saveMeal()" disabled data-i18n="meal_save_default">Запиши: BG + XE + бърз инсулин</button>
     </div>
 
-    <div class="info-box">
+    <div class="info-box" data-i18n-html="meal_info_three_entries">
       Ще се създадат <strong>3 отделни записа</strong> с еднакво време: BG (mmol/L), XE (брой), Бърз инсулин (U). Може после да ги видиш и редактираш в главната страница.
     </div>
   </div>
@@ -162,27 +163,27 @@
 <!-- =============== EVENING TAB =============== -->
 <div class="tab-content" data-tab="evening">
   <div class="panel">
-    <h2>Вечерна бавна доза</h2>
+    <h2 data-i18n="meal_evening_title">Вечерна бавна доза</h2>
     <div class="row">
       <div>
-        <label>Дата и час</label>
+        <label data-i18n="datetime">Дата и час</label>
         <div class="dt-picker">
           <input type="date" id="e-date">
-          <input type="number" id="e-hour" min="0" max="23" class="dt-num" placeholder="ч">
+          <input type="number" id="e-hour" min="0" max="23" class="dt-num" placeholder="ч" data-i18n-placeholder="meal_ph_hour">
           <span class="dt-sep">:</span>
-          <input type="number" id="e-min" min="0" max="59" class="dt-num" placeholder="м">
+          <input type="number" id="e-min" min="0" max="59" class="dt-num" placeholder="м" data-i18n-placeholder="meal_ph_min">
         </div>
       </div>
       <div>
-        <label>BG сега (mmol/L)</label>
-        <input type="number" id="e-bg" step="0.1" min="1" max="30" placeholder="напр. 6.5" oninput="autoCalcEvening()">
+        <label data-i18n="meal_bg_now">BG сега (mmol/L)</label>
+        <input type="number" id="e-bg" step="0.1" min="1" max="30" placeholder="напр. 6.5" data-i18n-placeholder="meal_ph_eg_6_5" oninput="autoCalcEvening()">
       </div>
     </div>
 
     <div id="ev-result" class="calc-result" style="display:none"></div>
 
     <div class="actions">
-      <button class="btn big" id="e-save-btn" onclick="saveEvening()" disabled>Запиши вечерна доза</button>
+      <button class="btn big" id="e-save-btn" onclick="saveEvening()" disabled data-i18n="meal_save_evening">Запиши вечерна доза</button>
     </div>
 
     <div class="info-box" id="e-info-box"></div>
@@ -192,9 +193,9 @@
 <!-- =============== SETTINGS TAB =============== -->
 <div class="tab-content" data-tab="settings">
   <div class="panel">
-    <h2>Правила за изчисление на дозата</h2>
+    <h2 data-i18n="meal_rules_title">Правила за изчисление на дозата</h2>
     <div id="settings-body">
-      <div style="text-align:center;padding:20px;color:var(--muted)">Зареждане...</div>
+      <div style="text-align:center;padding:20px;color:var(--muted)" data-i18n="meal_loading">Зареждане...</div>
     </div>
   </div>
 </div>
@@ -258,7 +259,7 @@ async function doLogin() {
     document.getElementById('login-pass').value = '';
     hideLogin();
     init();
-  } catch(e) { err.textContent = 'Грешен потребител или парола'; }
+  } catch(e) { err.textContent = t('login_error'); }
 }
 
 // ============= HELPERS =============
@@ -341,23 +342,23 @@ async function autoCalc() {
     if (d.blocked) {
       resultEl.classList.add('blocked');
       resultEl.innerHTML = `
-        <div class="dose-big blocked">🚫 Блокирано</div>
+        <div class="dose-big blocked">${t('meal_blocked')}</div>
         <div class="alert danger">${d.message}</div>
-        <div style="text-align:center;color:var(--muted);font-size:12px">Можеш да запишеш само BG + XE без инсулин.</div>
+        <div style="text-align:center;color:var(--muted);font-size:12px">${t('meal_blocked_hint')}</div>
       `;
       saveBtn.disabled = false;
-      saveBtn.textContent = 'Запиши: BG + XE (без инсулин)';
+      saveBtn.textContent = t('meal_save_no_insulin');
     } else {
       resultEl.classList.remove('blocked');
       const warnings = d.warnings.map(w => `<div class="alert ${w.level}">${w.message}</div>`).join('');
       resultEl.innerHTML = `
-        <div style="text-align:center;color:var(--muted);font-size:12px;text-transform:uppercase">Препоръчана доза бърз инсулин</div>
+        <div style="text-align:center;color:var(--muted);font-size:12px;text-transform:uppercase">${t('meal_recommended_dose')}</div>
         <div class="dose-big">${d.recommended_units} U</div>
         <div class="breakdown">${d.breakdown}</div>
         ${warnings}
       `;
       saveBtn.disabled = false;
-      saveBtn.textContent = `Запиши: BG + XE + ${d.recommended_units} U бърз`;
+      saveBtn.textContent = t('meal_save_with_dose', { u: d.recommended_units });
     }
   } catch(e) {
     if (e.message !== 'Unauthorized') toast(e.message, 'error');
@@ -376,11 +377,11 @@ function updateSaveBtnLabel() {
   const useOverride = document.getElementById('m-override-chk').checked;
   const overrideVal = parseFloat(document.getElementById('m-override').value);
   if (calcData.blocked) {
-    saveBtn.textContent = 'Запиши: BG + XE (без инсулин)';
+    saveBtn.textContent = t('meal_save_no_insulin');
   } else if (useOverride && !isNaN(overrideVal)) {
-    saveBtn.textContent = `Запиши: BG + XE + ${overrideVal} U бърз (override)`;
+    saveBtn.textContent = t('meal_save_with_dose_override', { u: overrideVal });
   } else {
-    saveBtn.textContent = `Запиши: BG + XE + ${calcData.recommended_units} U бърз`;
+    saveBtn.textContent = t('meal_save_with_dose', { u: calcData.recommended_units });
   }
 }
 document.addEventListener('input', (e) => {
@@ -390,7 +391,7 @@ document.addEventListener('input', (e) => {
 async function saveMeal() {
   if (!calcData) return;
   const dt = readDatetime('m');
-  if (!dt) { toast('Невалидна дата/час', 'error'); return; }
+  if (!dt) { toast(t('meal_invalid_datetime'), 'error'); return; }
   const iso = dt.toISOString();
   const bg = parseFloat(document.getElementById('m-bg').value);
   const xe = parseFloat(document.getElementById('m-xe').value);
@@ -405,7 +406,7 @@ async function saveMeal() {
 
   const saveBtn = document.getElementById('m-save-btn');
   saveBtn.disabled = true;
-  saveBtn.textContent = 'Записване...';
+  saveBtn.textContent = t('meal_saving');
 
   try {
     // BG entry
@@ -438,11 +439,11 @@ async function saveMeal() {
     document.getElementById('override-block').style.display = 'none';
     setNowInto('m');
     calcData = null;
-    saveBtn.textContent = 'Запиши: BG + XE + бърз инсулин';
+    saveBtn.textContent = t('meal_save_default');
 
-    toast(`Записано: BG + XE${insulin ? ' + ' + insulin + ' U бърз' : ''}`, 'ok');
+    toast(insulin ? t('meal_saved_with_insulin', { u: insulin }) : t('meal_saved'), 'ok');
   } catch(e) {
-    if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, 'error');
+    if (e.message !== 'Unauthorized') toast(t('toast_error') + e.message, 'error');
     saveBtn.disabled = false;
     updateSaveBtnLabel();
   }
@@ -470,7 +471,7 @@ async function autoCalcEvening() {
     if (d.blocked) {
       resultEl.classList.add('blocked');
       resultEl.innerHTML = `
-        <div class="dose-big blocked">🚫 Хипогликемия</div>
+        <div class="dose-big blocked">${t('meal_hypo_blocked')}</div>
         <div class="alert danger">${d.message}</div>
       `;
       saveBtn.disabled = true;
@@ -479,16 +480,16 @@ async function autoCalcEvening() {
       resultEl.classList.remove('blocked');
       let snackHtml = '';
       if (d.snack_recommended) {
-        snackHtml = `<div class="alert info">🍶 BG ${bg} mmol/L ≤ прага за снак. Препоръчано: <strong>${d.snack_desc}</strong> преди инжектиране.</div>`;
+        snackHtml = `<div class="alert info">${t('meal_snack_hint', { bg: bg, desc: d.snack_desc })}</div>`;
       }
       resultEl.innerHTML = `
-        <div style="text-align:center;color:var(--muted);font-size:12px;text-transform:uppercase">Вечерна бавна доза</div>
+        <div style="text-align:center;color:var(--muted);font-size:12px;text-transform:uppercase">${t('meal_evening_title')}</div>
         <div class="dose-big" style="color:var(--slow)">${d.slow_dose} U</div>
         ${snackHtml}
       `;
       saveBtn.disabled = false;
-      saveBtn.textContent = `Запиши: BG${d.snack_recommended ? ' + снак' : ''} + ${d.slow_dose} U бавен`;
-      infoBox.innerHTML = 'Ще се създадат ' + (d.snack_recommended ? '3' : '2') + ' записа: BG, ' + (d.snack_recommended ? 'снак (в бележка), ' : '') + 'бавен инсулин.';
+      saveBtn.textContent = t(d.snack_recommended ? 'meal_save_evening_dose_snack' : 'meal_save_evening_dose', { u: d.slow_dose });
+      infoBox.innerHTML = t(d.snack_recommended ? 'meal_ev_info_3' : 'meal_ev_info_2');
     }
   } catch(e) {
     if (e.message !== 'Unauthorized') toast(e.message, 'error');
@@ -498,7 +499,7 @@ async function autoCalcEvening() {
 async function saveEvening() {
   if (!evData || evData.blocked) return;
   const dt = readDatetime('e');
-  if (!dt) { toast('Невалидна дата/час', 'error'); return; }
+  if (!dt) { toast(t('meal_invalid_datetime'), 'error'); return; }
   const iso = dt.toISOString();
   const bg = parseFloat(document.getElementById('e-bg').value);
 
@@ -520,9 +521,9 @@ async function saveEvening() {
     setNowInto('e');
     evData = null;
     document.getElementById('e-info-box').innerHTML = '';
-    toast('Вечерна доза записана', 'ok');
+    toast(t('meal_evening_saved'), 'ok');
   } catch(e) {
-    if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, 'error');
+    if (e.message !== 'Unauthorized') toast(t('toast_error') + e.message, 'error');
     saveBtn.disabled = false;
   }
 }
@@ -534,13 +535,13 @@ async function renderSettings() {
     settings = await api('/settings');
     const corr = settings.corrections || [];
     body.innerHTML = `
-      <div class="settings-row"><label>I:C ratio при <strong>нормална BG</strong> (≥ праг)</label><input type="number" step="0.1" min="0.5" max="10" id="s-ic-normal" value="${settings.ic_ratio_normal}"><span style="color:var(--muted);font-size:12px">U за 1 XE</span></div>
-      <div class="settings-row"><label>I:C ratio при <strong>ниска BG</strong> (< праг)</label><input type="number" step="0.1" min="0.5" max="10" id="s-ic-low" value="${settings.ic_ratio_low_bg}"><span style="color:var(--muted);font-size:12px">U за 1 XE</span></div>
-      <div class="settings-row"><label>Праг за "ниска BG"</label><input type="number" step="0.1" min="3" max="10" id="s-low-thresh" value="${settings.ic_low_bg_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
+      <div class="settings-row"><label>${t('meal_set_ic_normal')}</label><input type="number" step="0.1" min="0.5" max="10" id="s-ic-normal" value="${settings.ic_ratio_normal}"><span style="color:var(--muted);font-size:12px">${t('meal_set_u_per_xe')}</span></div>
+      <div class="settings-row"><label>${t('meal_set_ic_low')}</label><input type="number" step="0.1" min="0.5" max="10" id="s-ic-low" value="${settings.ic_ratio_low_bg}"><span style="color:var(--muted);font-size:12px">${t('meal_set_u_per_xe')}</span></div>
+      <div class="settings-row"><label>${t('meal_set_low_thresh')}</label><input type="number" step="0.1" min="3" max="10" id="s-low-thresh" value="${settings.ic_low_bg_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
 
-      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;margin:16px 0 8px 0">Корекции при висока BG</h3>
+      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;margin:16px 0 8px 0">${t('meal_set_corr_title')}</h3>
       <table class="corrections-table">
-        <thead><tr><th>От (вкл.)</th><th>До (изкл.)</th><th>+ U</th><th></th></tr></thead>
+        <thead><tr><th>${t('meal_set_from_incl')}</th><th>${t('meal_set_to_excl')}</th><th>+ U</th><th></th></tr></thead>
         <tbody id="corr-body">
           ${corr.map((r, i) => `
             <tr>
@@ -552,25 +553,25 @@ async function renderSettings() {
           `).join('')}
         </tbody>
       </table>
-      <button class="btn secondary" style="font-size:12px;padding:4px 10px" onclick="addCorr()">+ ред</button>
+      <button class="btn secondary" style="font-size:12px;padding:4px 10px" onclick="addCorr()">${t('meal_set_add_row')}</button>
 
-      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;margin:16px 0 8px 0">Безопасност</h3>
-      <div class="settings-row"><label>Хипо праг (блокира инсулин)</label><input type="number" step="0.1" min="2" max="8" id="s-hypo" value="${settings.hypo_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
-      <div class="settings-row"><label>Праг за проверка на кетоните</label><input type="number" step="0.5" min="10" max="25" id="s-ket" value="${settings.ketones_check_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
-      <div class="settings-row"><label>Insulin stacking prompt (часове)</label><input type="number" step="0.5" min="0.5" max="8" id="s-stack" value="${settings.insulin_stacking_hours}"><span style="color:var(--muted);font-size:12px">часа</span></div>
+      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;margin:16px 0 8px 0">${t('meal_set_safety')}</h3>
+      <div class="settings-row"><label>${t('meal_set_hypo')}</label><input type="number" step="0.1" min="2" max="8" id="s-hypo" value="${settings.hypo_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
+      <div class="settings-row"><label>${t('meal_set_ketones')}</label><input type="number" step="0.5" min="10" max="25" id="s-ket" value="${settings.ketones_check_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
+      <div class="settings-row"><label>${t('meal_set_stacking')}</label><input type="number" step="0.5" min="0.5" max="8" id="s-stack" value="${settings.insulin_stacking_hours}"><span style="color:var(--muted);font-size:12px">${t('meal_set_hours')}</span></div>
 
-      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;margin:16px 0 8px 0">Вечерна доза</h3>
-      <div class="settings-row"><label>Праг за препоръка снак</label><input type="number" step="0.1" min="3" max="15" id="s-ev-thresh" value="${settings.evening_snack_bg_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
-      <div class="settings-row"><label>Описание на снака</label><input type="text" maxlength="200" id="s-ev-desc" value="${escapeHtml(settings.evening_snack_desc)}"><span></span></div>
-      <div class="settings-row"><label>Вечерна доза бавен инсулин</label><input type="number" step="0.5" min="0" max="100" id="s-ev-dose" value="${settings.evening_slow_dose}"><span style="color:var(--muted);font-size:12px">U</span></div>
+      <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;margin:16px 0 8px 0">${t('meal_tab_evening')}</h3>
+      <div class="settings-row"><label>${t('meal_set_snack_thresh')}</label><input type="number" step="0.1" min="3" max="15" id="s-ev-thresh" value="${settings.evening_snack_bg_threshold}"><span style="color:var(--muted);font-size:12px">mmol/L</span></div>
+      <div class="settings-row"><label>${t('meal_set_snack_desc')}</label><input type="text" maxlength="200" id="s-ev-desc" value="${escapeHtml(settings.evening_snack_desc)}"><span></span></div>
+      <div class="settings-row"><label>${t('meal_set_ev_dose')}</label><input type="number" step="0.5" min="0" max="100" id="s-ev-dose" value="${settings.evening_slow_dose}"><span style="color:var(--muted);font-size:12px">U</span></div>
 
       <div class="actions">
-        <button class="btn" onclick="saveSettings()">Запази</button>
-        <button class="btn secondary" onclick="resetSettings()">Върни към default</button>
+        <button class="btn" onclick="saveSettings()">${t('meal_save_settings')}</button>
+        <button class="btn secondary" onclick="resetSettings()">${t('meal_reset_default')}</button>
       </div>
 
       <div class="info-box">
-        Промените засягат само изчисляването на препоръчани дози. Не променят вече записани данни. Може да ги коригираш винаги.
+        ${t('meal_set_info')}
       </div>
     `;
   } catch(e) {
@@ -619,20 +620,20 @@ async function saveSettings() {
 
   try {
     settings = await api('/settings', { method: 'PUT', body: JSON.stringify(payload) });
-    toast('Настройките са запазени', 'ok');
+    toast(t('meal_settings_saved'), 'ok');
   } catch(e) {
-    if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, 'error');
+    if (e.message !== 'Unauthorized') toast(t('toast_error') + e.message, 'error');
   }
 }
 
 async function resetSettings() {
-  if (!confirm('Върнеш ли към default стойностите?')) return;
+  if (!confirm(t('meal_confirm_reset'))) return;
   try {
     settings = await api('/settings/reset', { method: 'POST' });
     renderSettings();
-    toast('Върнато към default', 'ok');
+    toast(t('meal_reset_done'), 'ok');
   } catch(e) {
-    if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, 'error');
+    if (e.message !== 'Unauthorized') toast(t('toast_error') + e.message, 'error');
   }
 }
 
@@ -647,7 +648,17 @@ async function init() {
   } catch(e) { /* silent, login flow will kick in */ }
 }
 
+document.addEventListener('langchange', async () => {
+  document.title = t('meal_page_title');
+  await autoCalc();
+  updateSaveBtnLabel();
+  await autoCalcEvening();
+  if (document.querySelector('.tab.active').dataset.tab === 'settings') renderSettings();
+});
+
 (async () => {
+  await i18nReady();
+  document.title = t('meal_page_title');
   await checkAuth();
   if (authMode === 'login' && !getToken()) {
     showLogin();
