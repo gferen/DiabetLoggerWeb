@@ -100,8 +100,30 @@ def load_watermark() -> int:
     return 0
 
 
-def save_watermark(ts_ms: int):
-    WATERMARK_FILE.write_text(json.dumps({"last_synced_ms": ts_ms}))
+def save_watermark(ts_ms: int, mbg_ts_ms: int | None = None):
+    data = {"last_synced_ms": ts_ms}
+    if mbg_ts_ms is not None:
+        data["last_mbg_synced_ms"] = mbg_ts_ms
+    else:
+        # preserve existing mbg watermark
+        existing = {}
+        if WATERMARK_FILE.exists():
+            try: existing = json.loads(WATERMARK_FILE.read_text())
+            except: pass
+        if "last_mbg_synced_ms" in existing:
+            data["last_mbg_synced_ms"] = existing["last_mbg_synced_ms"]
+    WATERMARK_FILE.write_text(json.dumps(data))
+
+
+def load_mbg_watermark() -> int:
+    """Returns last successfully synced mbg timestamp (ms epoch), or 0."""
+    if WATERMARK_FILE.exists():
+        try:
+            data = json.loads(WATERMARK_FILE.read_text())
+            return int(data.get("last_mbg_synced_ms", 0))
+        except Exception:
+            return 0
+    return 0
 
 
 def fetch_sensor_start_ms() -> int | None:
@@ -130,6 +152,49 @@ def _get_json(url: str):
 def fetch_entries(count: int):
     url = f"{BASE_URL}/sgv.json?count={count}"
     return _get_json(url)
+
+
+def fetch_mbg(count: int):
+    """Fetch meter blood glucose (finger-prick) readings from Juggluco."""
+    url = f"{BASE_URL}/mbg.json?count={count}"
+    return _get_json(url)
+
+
+def post_mbg_entry(entry: dict) -> bool:
+    """Post a meter BG entry with [Глюкомер-BT] tag."""
+    ts_iso = datetime.fromtimestamp(entry["date"] / 1000, tz=timezone.utc).isoformat()
+    payload = {
+        "type": "bg",
+        "value": mmol(entry.get("mbg", entry.get("sgv", 0))),
+        "time": ts_iso,
+        "notes": "[Глюкомер-BT]",
+        "meta": {"source": "own"},
+    }
+    body = json.dumps(payload).encode("utf-8")
+    req = Request(
+        DIABET_LOGGER_URL,
+        data=body,
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": DIABET_LOGGER_API_KEY,
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=15) as resp:
+            return resp.status in (200, 201)
+    except HTTPError as e:
+        # 409 or duplicate — already exists, skip silently
+        if e.code == 409:
+            return True
+        body_text = e.read().decode()
+        if "duplicate" in body_text.lower():
+            return True
+        print(f"[error] POST mbg failed ({e.code}): {body_text}", file=sys.stderr)
+        return False
+    except URLError as e:
+        print(f"[error] POST mbg failed: {e}", file=sys.stderr)
+        return False
 
 
 def post_entry(entry: dict) -> bool:
@@ -207,7 +272,36 @@ def main():
     if pushed > 0:
         save_watermark(max_ts)
 
-    print(f"[done] pushed {pushed}/{len(new_entries)} entries. watermark updated to {datetime.fromtimestamp(max_ts/1000)}")
+    print(f"[done] CGM: pushed {pushed}/{len(new_entries)} entries. watermark updated to {datetime.fromtimestamp(max_ts/1000)}")
+
+    # --- MBG (meter blood glucose from BT glucometer) ---
+    mbg_cutoff = load_mbg_watermark()
+    if mbg_cutoff == 0:
+        mbg_cutoff = int(time.time() * 1000) - 24 * 3600 * 1000
+    mbg_count = min(1000, max(1, int(span_hours * 4)))  # ~4 readings per hour max
+    try:
+        mbg_data = fetch_mbg(mbg_count)
+    except Exception as e:
+        print(f"[warn] mbg fetch failed (not fatal): {e}", file=sys.stderr)
+        mbg_data = []
+
+    new_mbg = [d for d in mbg_data if d.get("date", 0) > mbg_cutoff]
+    new_mbg.sort(key=lambda d: d["date"])
+
+    mbg_pushed = 0
+    mbg_max_ts = mbg_cutoff
+    for entry in new_mbg:
+        if post_mbg_entry(entry):
+            mbg_pushed += 1
+            mbg_max_ts = max(mbg_max_ts, entry["date"])
+
+    if mbg_pushed > 0:
+        save_watermark(max_ts if pushed > 0 else load_watermark(), mbg_max_ts)
+
+    if new_mbg:
+        print(f"[done] MBG: pushed {mbg_pushed}/{len(new_mbg)} meter readings")
+    else:
+        print(f"[done] MBG: no new meter readings")
 
 
 if __name__ == "__main__":

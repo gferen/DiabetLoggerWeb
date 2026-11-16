@@ -13,7 +13,7 @@ FastAPI + SQLite + Chart.js, един контейнер.
 - **Поддръжка на помпа (Medtrum Nano):** при бърз инсулин — доставка (помпа/писалка/венозно), вид инсулин (Fiasp/NovoRapid/друг), вид болус (нормален/удължен/комбо с продължителност). При бавен — доставка и вид инсулин. В историята записите показват иконки за доставката и вида болус
 - **Източник на BG:** при ръчно измерване — свой глюкомер, болничен или CGM ръчно. Болничните измервания показват 🏥 в историята
 - **Кетони:** приемат стойност 0 (за нулев резултат при тест)
-- **CGM:** показанията от Juggluco се дърпат от телефона (`juggluco_pull.py`) и се записват като обикновени `bg` записи с бележка `[CGM]`
+- **CGM:** показанията от Juggluco се дърпат от телефона (`juggluco_pull.py`) и се записват като обикновени `bg` записи с бележка `[CGM]`. Ръчните измервания от BT глюкомер се дърпат от `mbg.json` и се записват с бележка `[Глюкомер-BT]`, с отделен watermark и дедупликация по време
 - **Time-in-Range** (Battelino et al. 2019), **GMI** (Bergenstal 2018), средна BG, SD, CV%
 - **График** със zoom и преместване по времето. CGM е тънка линия, ръчните измервания са точки. Филтри по период и по източник (BG + CGM / ръчни / само CGM). Маркери за храна (XE) и за лечение на ниска; бележката излиза при посочване
 - **История** с редакция на бележките на място (стойността и часът не се променят, това е умишлено: audit trail)
@@ -80,6 +80,7 @@ juggluco_pull.py       дърпа CGM от Juggluco на телефона (пр�
 juggluco_watermark.json докъде е стигнал последният pull
 dedupe.py              намира и чисти дублирани записи, по подразбиране само отчет (виж "Дубликати")
 logger2diabetesm.py    конвертор от Logger CSV към Diabetes:M ENTRIES формат за импорт
+static/profiles.html   профили на помпата: базал, ISF, CR — история на настройките със сравнение
 qa.py                  QA тестове: python3 qa.py
 static/                index.html, meal.html, report.html, print-review.html, cgm_view.html
 data/diabet.db         SQLite (bind mount)
@@ -100,6 +101,7 @@ data/diabet.db         SQLite (bind mount)
 - **`UNIQUE(type, time)`:** два записа от един тип със същото време не могат да съществуват. Повторен POST връща съществуващия запис с `"duplicate": true`, а importът пропуска дублираните. Следствие: два ръчни BG в една и съща минута се слепват в един.
 - **`settings`:** key-value. Ред `rules` са правилата на калкулатора (JSON), ред `timezone` е избраната часова зона.
 - **`day_profiles`:** `date` (локален ден), `profile` (`fast`/`normal`/`slow`), `notes`. Не влиза в `/api/export`.
+- **`basal_profiles`:** `id`, `name`, `active_from` (YYYY-MM-DD), `basal` (JSON, 24 стойности U/h), `isf` (JSON, сегменти `[{from, value}]`), `cr` (JSON, сегменти `[{from, value}]`), `notes`. История на настройките на помпата — кой профил кога е бил активен.
 
 ## API
 
@@ -127,8 +129,13 @@ data/diabet.db         SQLite (bind mount)
 | GET | `/api/day-profiles` | `?from=&to=` (дати `YYYY-MM-DD`) |
 | PUT / DELETE | `/api/day-profiles/{date}` | `{profile,notes}` / изтриване |
 | GET | `/api/day-response?date=` | числа за първата бърза доза за деня: BG при дозата и след 2 и 3 ч |
+| GET | `/api/profiles` | всички базални профили, по `active_from` desc |
+| POST | `/api/profiles` | нов профил `{name, active_from, basal, isf, cr, notes}` |
+| PUT | `/api/profiles/{id}` | редакция на профил |
+| DELETE | `/api/profiles/{id}` | изтриване |
+| GET | `/api/profiles/active` | профилът с най-нов `active_from` ≤ днес |
 
-Страници: `/` (главна), `/meal`, `/report`, `/print-review`.
+Страници: `/` (главна), `/meal`, `/report`, `/print-review`, `/static/profiles.html` (профили на помпата).
 
 ## Калкулатор на дозите
 
@@ -261,4 +268,4 @@ server {
 
 ## Миграции
 
-Автоматични при старт: премахване на стария `CHECK` (v2 → v3), добавяне на колоните `meal_time`, `carbs_g`, `meta`, таблиците `settings` и `day_profiles`. Данните се запазват.
+Автоматични при старт: премахване на стария `CHECK` (v2 → v3), добавяне на колоните `meal_time`, `carbs_g`, `meta`, таблиците `settings`, `day_profiles` и `basal_profiles`. Данните се запазват.
