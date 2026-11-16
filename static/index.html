@@ -1287,7 +1287,7 @@ async function doLogin() {
     reload();
     loadSettings().then(updateQuickTotals);
     loadTimezone();
-  } catch(e) { err.textContent = 'Грешен потребител или парола'; }
+  } catch(e) { err.textContent = t('login_error'); }
 }
 function logout() {
   clearToken();
@@ -1365,7 +1365,7 @@ async function saveSettings() {
   const val = parseFloat(document.getElementById('xe-grams-input').value);
   const statusEl = document.getElementById('settings-status');
   if (!val || val <= 0 || val >= 100) {
-    statusEl.textContent = 'Невалидна стойност (1-99)';
+    statusEl.textContent = t('xe_invalid');
     statusEl.style.color = 'var(--danger)';
     return;
   }
@@ -1374,7 +1374,7 @@ async function saveSettings() {
       method: 'PUT',
       body: JSON.stringify({ xe_grams_carbs: val })
     });
-    statusEl.textContent = 'Запазено ✓';
+    statusEl.textContent = t('saved_ok') + ' ✓';
     statusEl.style.color = 'var(--ok)';
     setTimeout(() => { statusEl.textContent = ''; }, 3000);
   } catch(e) {
@@ -1401,7 +1401,7 @@ function fmtClock(iso) {
 }
 function fmtAge(ms) {
   const m = Math.round(ms / 60000);
-  if (m < 1) return 'току-що';
+  if (m < 1) return t('time_just_now');
   if (m < 60) return `преди ${m} мин`;
   const h = Math.floor(m / 60);
   if (h < 24) return `преди ${h} ч ${m % 60} мин`;
@@ -1469,11 +1469,11 @@ async function addEntry(type) {
     val = 0; // device_change няма реална числова стойност
   } else {
     val = parseFloat(document.getElementById(`${type}-value`).value);
-    if (!val && val !== 0) { toast('Стойността е задължителна', true); return; }
+    if (!val && val !== 0) { toast(t('toast_value_required'), true); return; }
   }
 
   const dt = readDatetime(type);
-  if (!dt) { toast('Невалидна дата или час', true); return; }
+  if (!dt) { toast(t('toast_invalid_time'), true); return; }
   const notes = document.getElementById(`${type}-notes`).value;
 
   const payload = { type, value: val, time: dt.toISOString(), notes };
@@ -1504,7 +1504,7 @@ async function addEntry(type) {
     const mealToggle = document.getElementById('fast-meal-time-toggle');
     if (mealToggle.checked) {
       const mealDt = readDatetime('fast-meal');
-      if (!mealDt) { toast('Невалиден час за начало на хранене', true); return; }
+      if (!mealDt) { toast(t('toast_invalid_meal_time'), true); return; }
       payload.meal_time = mealDt.toISOString();
     }
   }
@@ -1530,7 +1530,7 @@ async function addEntry(type) {
     }
     setNowInto(type);
     await reload();
-    toast('Записано');
+    toast(t('toast_saved'));
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -1538,11 +1538,11 @@ async function addHypo() {
   syncNowFields(true);
   const g = parseFloat(document.getElementById('hypo-g').value);
   const n = parseInt(document.getElementById('hypo-n').value, 10);
-  if (!(g > 0) || !(n > 0)) { toast('Грамове и брой са задължителни', true); return; }
+  if (!(g > 0) || !(n > 0)) { toast(t('toast_grams_required'), true); return; }
   const xeG = parseFloat(document.getElementById('xe-grams-input')?.value) || 12;
   const grams = g * n;
   const dt = readDatetime('hypo');
-  if (!dt) { toast('Невалидна дата или час', true); return; }
+  if (!dt) { toast(t('toast_invalid_time'), true); return; }
   const extra = document.getElementById('hypo-notes').value.trim();
   const payload = { type: 'meal', value: Math.round(grams / xeG * 100) / 100, carbs_g: grams,
                     time: dt.toISOString(), notes: `[ХИПО] ${n}×${g}g` + (extra ? ' — ' + extra : '') };
@@ -1558,9 +1558,9 @@ async function addHypo() {
 async function addCig() {
   syncNowFields(true);
   const n = parseInt(document.getElementById('cig-n').value, 10);
-  if (!(n > 0)) { toast('Брой е задължителен', true); return; }
+  if (!(n > 0)) { toast(t('toast_count_required'), true); return; }
   const dt = readDatetime('cig');
-  if (!dt) { toast('Невалидна дата или час', true); return; }
+  if (!dt) { toast(t('toast_invalid_time'), true); return; }
   const extra = document.getElementById('cig-notes').value.trim();
   const payload = { type: 'activity', value: 5, time: dt.toISOString(),
                     notes: `[ЦИГАРА] ${n} бр.` + (extra ? ' — ' + extra : ''),
@@ -1580,10 +1580,10 @@ async function addNightKit() {
   const fg = parseFloat(document.getElementById('nk-fast-g').value) || 0;
   const sg = parseFloat(document.getElementById('nk-slow-g').value) || 0;
   const total = fg + sg;
-  if (total <= 0) { toast('Въведи поне бързи или бавни грамове', true); return; }
+  if (total <= 0) { toast(t('toast_carbs_required'), true); return; }
   const xeG = parseFloat(document.getElementById('xe-grams-input')?.value) || 12;
   const dt = readDatetime('nk');
-  if (!dt) { toast('Невалидна дата или час', true); return; }
+  if (!dt) { toast(t('toast_invalid_time'), true); return; }
   const extra = document.getElementById('nk-notes').value.trim();
   const parts = [];
   if (fg > 0) parts.push(`${fg}g бързи`);
@@ -1604,7 +1604,7 @@ async function addPeriod() {
   const ptype = document.getElementById('period-type').value;
   const startDate = document.getElementById('period-start-date').value;
   const endDate = document.getElementById('period-end-date').value;
-  if (!startDate) { toast('Начална дата е задължителна', true); return; }
+  if (!startDate) { toast(t('toast_start_required'), true); return; }
   const extra = document.getElementById('period-notes').value.trim();
   const periodLabels = { hospital: 'Болница', travel: 'Пътуване', sick: 'Болест', stress: 'Стрес', exercise: 'Активен ден', other: 'Друго' };
   const label = periodLabels[ptype] || ptype;
@@ -1629,9 +1629,9 @@ async function addTempBasal() {
   syncNowFields(true);
   const pct = parseInt(document.getElementById('tb-pct').value, 10);
   const dur = parseInt(document.getElementById('tb-dur').value, 10);
-  if (!(pct >= 0) || !(dur > 0)) { toast('Процент и продължителност са задължителни', true); return; }
+  if (!(pct >= 0) || !(dur > 0)) { toast(t('toast_pct_dur_required'), true); return; }
   const dt = readDatetime('tb');
-  if (!dt) { toast('Невалидна дата или час', true); return; }
+  if (!dt) { toast(t('toast_invalid_time'), true); return; }
   const extra = document.getElementById('tb-notes').value.trim();
   const payload = { type: 'device_change', value: 0, time: dt.toISOString(),
     notes: 'Temp Basal ' + pct + '% for ' + dur + ' min' + (extra ? ' \u2014 ' + extra : ''),
@@ -1648,9 +1648,9 @@ async function addTempBasal() {
 async function addQuickBolus() {
   syncNowFields(true);
   const units = parseFloat(document.getElementById('qb-units').value);
-  if (!(units > 0)) { toast('Единиците са задължителни', true); return; }
+  if (!(units > 0)) { toast(t('toast_units_required'), true); return; }
   const dt = readDatetime('qb');
-  if (!dt) { toast('Невалидна дата или час', true); return; }
+  if (!dt) { toast(t('toast_invalid_time'), true); return; }
   const extra = document.getElementById('qb-notes').value.trim();
   const payload = { type: 'fast', value: units, time: dt.toISOString(),
     notes: extra || 'manual bolus',
@@ -1668,9 +1668,9 @@ async function addQuickBolus() {
 async function addSuspend() {
   syncNowFields(true);
   const dur = parseInt(document.getElementById('susp-dur').value, 10);
-  if (!(dur > 0)) { toast('Продължителност е задължителна', true); return; }
+  if (!(dur > 0)) { toast(t('toast_duration_required'), true); return; }
   const dt = readDatetime('susp');
-  if (!dt) { toast('Невалидна дата или час', true); return; }
+  if (!dt) { toast(t('toast_invalid_time'), true); return; }
   const extra = document.getElementById('susp-notes').value.trim();
   const payload = { type: 'device_change', value: 0, time: dt.toISOString(),
     notes: 'Temp Basal 0% for ' + dur + ' min' + (extra ? ' \u2014 ' + extra : ''),
@@ -1687,7 +1687,7 @@ async function addSuspend() {
 async function addResume() {
   syncNowFields(true);
   const dt = readDatetime('resume');
-  if (!dt) { toast('Невалидна дата или час', true); return; }
+  if (!dt) { toast(t('toast_invalid_time'), true); return; }
   const extra = document.getElementById('resume-notes').value.trim();
   const payload = { type: 'device_change', value: 0, time: dt.toISOString(),
     notes: 'Resume basal' + (extra ? ' \u2014 ' + extra : ''),
@@ -1727,7 +1727,7 @@ function fastRecent(all, nowMs, hours) {
 }
 
 async function deleteEntry(id) {
-  if (!confirm('Изтрий запис?')) return;
+  if (!confirm(t('confirm_delete_entry'))) return;
   try {
     await api(`/entries/${id}`, { method: 'DELETE' });
     await reload();
@@ -1746,14 +1746,14 @@ async function reload() {
   try {
     entries = await api(entriesPath());
     await loadDayProfiles();
-    setStatus(true, `онлайн · ${entries.length} записа`);
+    setStatus(true, t("status_online", {n: entries.length}));
     await loadStats();
     render();
     loadDayPanel();
   } catch(e) {
     if (e.message !== 'Unauthorized') {
-      setStatus(false, 'офлайн');
-      toast('Грешка: ' + e.message, true);
+      setStatus(false, t('status_offline'));
+      toast(t('toast_error') + e.message, true);
     }
   }
 }
@@ -1800,7 +1800,7 @@ function renderStats() {
   if (latest) {
     const age = now - new Date(latest.time).getTime();
     const stale = age > 15 * 60 * 1000;   // показание по-старо от 15 мин се показва приглушено
-    const src = isCgm(latest) ? 'CGM' : (latest.meta && latest.meta.source === 'hospital') ? 'Болничен глюкомер' : 'Глюкомер';
+    const src = isCgm(latest) ? 'CGM' : (latest.meta && latest.meta.source === 'hospital') ? t('src_hospital_meter') : t('src_meter');
     reading = `
       <div class="reading${stale ? ' stale' : ''}">
         <div class="reading-row">
@@ -1829,12 +1829,12 @@ function renderStats() {
   document.getElementById('stats').innerHTML = `
     ${reading}
     <dl class="readouts">
-      ${readout('Средна за 24 ч', avg24, 'mmol/L')}
-      ${(statsData && statsData.gmi_pct != null) ? readout('GMI, прибл. HbA1c', statsData.gmi_pct, `% за ${statsData.days} д`) : ''}
-      ${readout('Бърз за 4 ч', r2(f4.units), 'U' + (f4.last ? `, последно ${fmtClock(f4.last)}` : ''), 'var(--fast)')}
-      ${readout('Бърз за 24 ч', fast24, 'U', 'var(--fast)')}
-      ${readout('Бавен за 24 ч', slow24, 'U', 'var(--slow)')}
-      ${latestKetones ? readout('Последни кетони', latestKetones.value, 'mmol/L',
+      ${readout(t('avg_24h'), avg24, 'mmol/L')}
+      ${(statsData && statsData.gmi_pct != null) ? readout(t('gmi_label'), statsData.gmi_pct, `% за ${statsData.days} д`) : ''}
+      ${readout(t('fast_4h'), r2(f4.units), 'U' + (f4.last ? `, последно ${fmtClock(f4.last)}` : ''), 'var(--fast)')}
+      ${readout(t('fast_24h'), fast24, 'U', 'var(--fast)')}
+      ${readout(t('slow_24h'), slow24, 'U', 'var(--slow)')}
+      ${latestKetones ? readout(t('last_ketones'), latestKetones.value, 'mmol/L',
           latestKetones.value >= 3 ? 'var(--danger)' : latestKetones.value >= 0.6 ? 'var(--high)' : 'var(--ok)') : ''}
     </dl>`;
 }
@@ -2090,12 +2090,12 @@ function renderChart() {
       datasets: [
         { label: 'CGM (mmol/L)', data: d.cgm, borderColor: P.ok, backgroundColor: 'transparent', borderWidth: 1.75, pointRadius: 0, pointHoverRadius: 3, tension: 0.2, spanGaps: false, yAxisID: 'y',
           segment: { borderColor: s => zoneColor((s.p0.parsed.y + s.p1.parsed.y) / 2) } },
-        { label: 'Ръчно измерване (mmol/L)', data: d.bg, borderColor: P.paper, backgroundColor: P.paper, pointBorderColor: P.ink, pointBorderWidth: 1.5, borderWidth: 1.5, pointRadius: 4.5, pointHoverRadius: 6, tension: 0.3, showLine: d.cgm.length === 0, yAxisID: 'y' },
-        { label: 'Кетони (mmol/L)', data: d.ketones, borderColor: P.ketones, backgroundColor: P.ketones, borderWidth: 2, pointRadius: 6, pointStyle: 'star', showLine: false, yAxisID: 'y' },
-        { label: 'Бърз (U)', data: d.fast, borderColor: P.fast, backgroundColor: P.fast, borderWidth: 0, pointRadius: 6, pointStyle: 'triangle', showLine: false, yAxisID: 'y1' },
-        { label: 'Бавен (U)', data: d.slow, borderColor: P.slow, backgroundColor: P.slow, borderWidth: 0, pointRadius: 6, pointStyle: 'rectRot', showLine: false, yAxisID: 'y1' },
-        { label: 'Храна (XE)', data: d.meal, borderColor: P.meal, backgroundColor: P.meal, borderWidth: 0, pointRadius: 5, pointStyle: 'circle', showLine: false, yAxisID: 'y1' },
-        { label: 'Ниска, въглехидрати (XE)', data: d.hypo, borderColor: P.danger, backgroundColor: P.danger, pointRadius: 7, pointStyle: 'crossRot', borderWidth: 3, showLine: false, yAxisID: 'y1' }
+        { label: t('chart_lbl_manual'), data: d.bg, borderColor: P.paper, backgroundColor: P.paper, pointBorderColor: P.ink, pointBorderWidth: 1.5, borderWidth: 1.5, pointRadius: 4.5, pointHoverRadius: 6, tension: 0.3, showLine: d.cgm.length === 0, yAxisID: 'y' },
+        { label: t('chart_lbl_ketones'), data: d.ketones, borderColor: P.ketones, backgroundColor: P.ketones, borderWidth: 2, pointRadius: 6, pointStyle: 'star', showLine: false, yAxisID: 'y' },
+        { label: t('chart_lbl_fast'), data: d.fast, borderColor: P.fast, backgroundColor: P.fast, borderWidth: 0, pointRadius: 6, pointStyle: 'triangle', showLine: false, yAxisID: 'y1' },
+        { label: t('chart_lbl_slow'), data: d.slow, borderColor: P.slow, backgroundColor: P.slow, borderWidth: 0, pointRadius: 6, pointStyle: 'rectRot', showLine: false, yAxisID: 'y1' },
+        { label: t('chart_lbl_meal'), data: d.meal, borderColor: P.meal, backgroundColor: P.meal, borderWidth: 0, pointRadius: 5, pointStyle: 'circle', showLine: false, yAxisID: 'y1' },
+        { label: t('chart_lbl_hypo'), data: d.hypo, borderColor: P.danger, backgroundColor: P.danger, pointRadius: 7, pointStyle: 'crossRot', borderWidth: 3, showLine: false, yAxisID: 'y1' }
       ]
     },
     options: {
@@ -2116,7 +2116,7 @@ function renderChart() {
       scales: {
         x: { type: 'time', time: { tooltipFormat: 'dd.MM HH:mm', displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'dd.MM' } }, ticks: { color: P.ash, maxRotation: 0, autoSkipPadding: 18 }, grid: { color: grid } },
         y: { position: 'left', title: { display: true, text: 'mmol/L', color: P.ash }, ticks: { color: P.ash }, grid: { color: grid }, suggestedMin: 3, suggestedMax: 15 },
-        y1: { position: 'right', title: { display: true, text: 'U и XE', color: P.ash }, ticks: { color: P.ash }, grid: { drawOnChartArea: false }, suggestedMin: 0, suggestedMax: 1 }
+        y1: { position: 'right', title: { display: true, text: t('chart_axis_u_xe'), color: P.ash }, ticks: { color: P.ash }, grid: { drawOnChartArea: false }, suggestedMin: 0, suggestedMax: 1 }
       }
     }
   });
@@ -2132,7 +2132,7 @@ const HISTORY_LIMIT = 200;
 // Заглавие на деня; ако има дневен профил, стои до датата. Клик отваря деня в „Дневен профил“.
 function dayHeader(day, dp, today, yesterday) {
   const esc = t => (t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-  const name = day === today ? 'Днес, ' : day === yesterday ? 'Вчера, ' : '';
+  const name = day === today ? t('today_comma') : day === yesterday ? t('yesterday_comma') : '';
   return `<li class="log-day" onclick="openDayProfile('${day}')" tabindex="0" role="button" title="Отвори в „Дневен профил“">
       <span class="log-day-name">${name}${day.slice(8)}.${day.slice(5, 7)}</span>
       ${dp ? `<span class="badge dp">${DP_LABEL[dp.profile] || dp.profile}</span><span class="log-day-note">${esc(dp.notes)}</span>` : ''}
@@ -2205,7 +2205,7 @@ function renderHistory() {
       if (e.meta && e.meta.temp_basal_pct !== undefined) {
         patchParts.push(e.meta.temp_basal_pct + '% / ' + (e.meta.temp_basal_min || '?') + ' мин');
       }
-      if (e.meta && e.meta.resume) patchParts.push('възобновен');
+      if (e.meta && e.meta.resume) patchParts.push(t('resumed'));
       // Period tags
       if (e.meta && e.meta.device_type === 'period') {
         const periodLabels = { hospital: '🏥 Болница', travel: '✈️ Пътуване', sick: '🤒 Болест', stress: '😰 Стрес', exercise: '🏃 Активен ден', other: '📌 Друго' };
@@ -2214,7 +2214,7 @@ function renderHistory() {
         patchParts.push(pLabel);
         if (e.meta.period_start) patchParts.push(e.meta.period_start);
         if (e.meta.period_end) patchParts.push('→ ' + e.meta.period_end);
-        else patchParts.push('(продължава)');
+        else patchParts.push(t('period_ongoing'));
       }
       value = dtLabel + (patchParts.length ? ' · ' + patchParts.join(', ') : '');
       cls = 'device-change';
@@ -2272,7 +2272,7 @@ function startEditNotes(cell) {
       const idx = entries.findIndex(e => e.id === id);
       if (idx !== -1) entries[idx].notes = newVal;
       renderHistory();
-      toast('Бележката е запазена');
+      toast(t('toast_note_saved'));
     } catch(e) {
       if (e.message !== 'Unauthorized') toast(e.message, true);
       renderHistory();
@@ -2370,7 +2370,7 @@ async function setDayProfile(profile) {
     await loadDayPanel();
     await loadDayProfiles();
     renderHistory();
-    toast('Профилът е запазен');
+    toast(t('toast_profile_saved'));
   } catch (e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 
@@ -2416,7 +2416,7 @@ async function loadTimezone() {
 async function saveTimezone() {
   try {
     await api('/timezone', { method: 'PUT', body: JSON.stringify({ timezone: document.getElementById('tz-select').value }) });
-    toast('Часовата зона е запазена');
+    toast(t('toast_tz_saved'));
     await loadTimezone();
     reload();
   } catch (e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
@@ -2438,14 +2438,14 @@ async function syncCgm() {
   const btn = document.getElementById('cgm-sync-btn');
   btn.disabled = true;
   const originalText = btn.textContent;
-  btn.textContent = 'Обновяване...';
+  btn.textContent = t('refreshing');
   try {
     const result = await api('/cgm-sync', { method: 'POST' });
     toast(result.summary || 'CGM синхронизацията завърши');
     await reload();
   } catch(e) {
     if (e.message !== 'Unauthorized') {
-      toast('Грешка при CGM синхронизация: ' + e.message, true);
+      toast(t('toast_cgm_error') + e.message, true);
       await reload();  // телефонът може да е недостъпен, но записите в базата пак се обновяват
     }
   } finally {
@@ -2470,7 +2470,7 @@ async function exportCSV() {
   try {
     data = await api('/export'); // пълен dataset, не само текущо заредения диапазон
   } catch(e) {
-    if (e.message !== 'Unauthorized') toast('Грешка: ' + e.message, true);
+    if (e.message !== 'Unauthorized') toast(t('toast_error') + e.message, true);
     return;
   }
   const fromV = document.getElementById('exp-from')?.value || '';
@@ -2509,7 +2509,7 @@ async function importJSON(ev) {
       });
       await reload();
       toast(`Импортирани: ${res.imported}`);
-    } catch(err) { if (err.message !== 'Unauthorized') toast('Грешка: ' + err.message, true); }
+    } catch(err) { if (err.message !== 'Unauthorized') toast(t('toast_error') + err.message, true); }
   };
   reader.readAsText(file);
   ev.target.value = '';
@@ -2520,7 +2520,7 @@ async function clearAll() {
   try {
     await api('/entries', { method: 'DELETE' });
     await reload();
-    toast('Изтрито');
+    toast(t('toast_deleted'));
   } catch(e) { if (e.message !== 'Unauthorized') toast(e.message, true); }
 }
 

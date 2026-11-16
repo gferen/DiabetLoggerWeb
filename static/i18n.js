@@ -16,45 +16,47 @@ const _supported = {
 async function loadLang(lang) {
   if (!(lang in _supported)) lang = 'bg';
   try {
-    const res = await fetch(`/static/lang/${lang}.json?v=${Date.now()}`);
+    const res = await fetch('/static/lang/' + lang + '.json?v=' + Date.now());
     if (!res.ok) throw new Error(res.statusText);
     _strings = await res.json();
     _lang = lang;
     localStorage.setItem('diabet_lang', lang);
-    applyTranslations();
+    applyTranslations(); if (typeof render === 'function') render();
+    document.documentElement.lang = lang;
     const sel = document.getElementById('lang-select');
     if (sel) sel.value = lang;
   } catch (e) {
-    console.warn(`[i18n] failed to load ${lang}:`, e);
+    console.warn('[i18n] failed to load ' + lang + ':', e);
     if (lang !== 'bg') loadLang('bg');
   }
 }
 
-function t(key, fallback) {
-  return _strings[key] || fallback || key;
+function t(key, params) {
+  let s = _strings[key] || key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), v);
+    }
+  }
+  return s;
 }
 
 function applyTranslations() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    const val = t(key);
-    if (val !== key) el.textContent = val;
+    const val = _strings[key];
+    if (val) el.textContent = val;
   });
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
       const key = el.getAttribute('data-i18n-placeholder');
-      const val = t(key);
-      if (val !== key) el.placeholder = val;
+      const val = _strings[key];
+      if (val) el.placeholder = val;
     });
       document.querySelectorAll('[data-i18n-title]').forEach(el => {
         const key = el.getAttribute('data-i18n-title');
-        const val = t(key);
-        if (val !== key) el.title = val;
+        const val = _strings[key];
+        if (val) el.title = val;
       });
-        document.querySelectorAll('[data-i18n-html]').forEach(el => {
-          const key = el.getAttribute('data-i18n-html');
-          const val = t(key);
-          if (val !== key) el.innerHTML = val;
-        });
 }
 
 function setLang(lang) { loadLang(lang); }
