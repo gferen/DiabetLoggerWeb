@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Профили — Diabet Logger</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩸</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sofia+Sans:wght@400;500;600;700&family=Sofia+Sans+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #15171a; --paper: #edeae4; --ash: #9ca3af; --raised: #1e2025;
+    --ok: #45d09b; --low: #f2c94c; --very-low: #ff5a5f; --high: #f2c94c; --very-high: #ff5a5f;
+    --fast: #f2994a; --device: #b8bec6;
+    --font-text: "Sofia Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-num: "Sofia Sans Condensed", "Roboto Condensed", "Arial Narrow", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: var(--font-text); background: var(--ink); color: var(--paper); padding: 16px; max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: var(--ash); margin-bottom: 20px; }
+  a { color: var(--ok); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .nav { margin-bottom: 20px; display: flex; gap: 16px; font-size: 14px; }
+
+  /* Active profile card */
+  .active-card { background: var(--raised); border: 1px solid var(--ok); border-radius: 10px; padding: 16px; margin-bottom: 24px; }
+  .active-card h3 { color: var(--ok); margin-bottom: 8px; }
+  .active-card .name { font: 600 20px var(--font-num); }
+  .active-card .date { color: var(--ash); font-size: 14px; }
+
+  /* Profile list */
+  .profiles { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .profile-card { background: var(--raised); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; cursor: pointer; transition: border-color 0.2s; }
+  .profile-card:hover { border-color: var(--ash); }
+  .profile-card.active { border-color: var(--ok); }
+  .profile-card .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .profile-card .name { font: 600 18px var(--font-num); }
+  .profile-card .date { color: var(--ash); font-size: 13px; }
+  .profile-card .basal-mini { display: flex; gap: 2px; align-items: flex-end; height: 30px; }
+  .profile-card .basal-mini .bar { flex: 1; background: var(--ok); border-radius: 2px 2px 0 0; min-width: 3px; opacity: 0.7; }
+  .profile-card .total { color: var(--ash); font-size: 13px; margin-top: 6px; }
+  .profile-card .notes { color: var(--ash); font-size: 13px; margin-top: 4px; font-style: italic; }
+  .profile-card .actions { display: flex; gap: 8px; margin-top: 8px; }
+
+  /* Buttons */
+  .btn { font-family: var(--font-text); font-size: 14px; padding: 8px 16px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; background: transparent; color: var(--paper); cursor: pointer; }
+  .btn:hover { background: var(--raised); }
+  .btn.primary { background: var(--ok); color: var(--ink); border-color: var(--ok); font-weight: 600; }
+  .btn.primary:hover { opacity: 0.9; }
+  .btn.danger { color: var(--very-low); border-color: var(--very-low); }
+  .btn.danger:hover { background: rgba(255,90,95,0.1); }
+
+  /* Form */
+  .form-section { background: var(--raised); border-radius: 10px; padding: 20px; margin-bottom: 24px; display: none; }
+  .form-section.visible { display: block; }
+  .form-section h3 { margin-bottom: 16px; }
+  .form-row { display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 13px; color: var(--ash); }
+  .field input, .field select { font-family: var(--font-text); font-size: 14px; padding: 8px; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; background: var(--ink); color: var(--paper); width: 100%; }
+  .field input:focus { outline: none; border-color: var(--ok); }
+  .field textarea { font-family: var(--font-text); font-size: 14px; padding: 8px; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; background: var(--ink); color: var(--paper); width: 100%; resize: vertical; }
+
+  /* Basal grid */
+  .basal-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-bottom: 16px; }
+  .basal-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .basal-cell label { font-size: 11px; color: var(--ash); }
+  .basal-cell input { width: 60px; text-align: center; font: 500 14px var(--font-num); padding: 6px 4px; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; background: var(--ink); color: var(--paper); }
+  .basal-cell input:focus { border-color: var(--ok); outline: none; }
+
+  /* ISF/CR segments */
+  .segments { margin-bottom: 16px; }
+  .seg-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .seg-row input { width: 70px; text-align: center; font: 500 14px var(--font-num); padding: 6px; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; background: var(--ink); color: var(--paper); }
+  .seg-row input:focus { border-color: var(--ok); outline: none; }
+  .seg-row .seg-label { font-size: 12px; color: var(--ash); width: 30px; }
+  .seg-add { font-size: 13px; color: var(--ok); cursor: pointer; background: none; border: none; padding: 4px 0; }
+  .seg-del { font-size: 16px; color: var(--very-low); cursor: pointer; background: none; border: none; padding: 0 4px; opacity: 0.6; }
+  .seg-del:hover { opacity: 1; }
+
+  /* Compare */
+  .compare-table { width: 100%; border-collapse: collapse; font: 14px var(--font-num); margin-bottom: 16px; }
+  .compare-table th, .compare-table td { padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08); text-align: center; }
+  .compare-table th { background: rgba(255,255,255,0.04); color: var(--ash); font-size: 12px; }
+  .compare-table td.diff { color: var(--fast); font-weight: 600; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--ok); color: var(--ink); padding: 10px 20px; border-radius: 8px; font-weight: 600; z-index: 999; display: none; }
+  .toast.err { background: var(--very-low); color: white; }
+
+  @media (max-width: 600px) {
+    .basal-grid { grid-template-columns: repeat(4, 1fr); }
+    .form-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="/">← Главна</a>
+  <a href="/meal">Хранене</a>
+  <a href="/static/report.html">Отчет</a>
+</div>
+
+<h1>⚙️ Профили на помпата</h1>
+<p class="subtitle">Базал, ISF и CR — история на настройките</p>
+
+<div id="active-card" class="active-card" style="display:none">
+  <h3>▶ Активен профил</h3>
+  <div class="name" id="active-name"></div>
+  <div class="date" id="active-date"></div>
+</div>
+
+<div style="margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+  <button class="btn primary" onclick="showForm()">＋ Нов профил</button>
+  <button class="btn" onclick="toggleCompare()">📊 Сравни</button>
+</div>
+
+<div id="form-section" class="form-section">
+  <h3 id="form-title">Нов профил</h3>
+  <input type="hidden" id="edit-id" value="">
+
+  <div class="form-row">
+    <div class="field" style="flex:1"><label for="prof-name">Име</label><input type="text" id="prof-name" placeholder="напр. Pattern A v3"></div>
+    <div class="field"><label for="prof-date">Активен от</label><input type="date" id="prof-date"></div>
+  </div>
+
+  <h4 style="margin: 12px 0 8px; font-size: 14px; color: var(--ash);">Базал (U/h по часове)</h4>
+  <div class="basal-grid" id="basal-grid"></div>
+
+  <h4 style="margin: 12px 0 8px; font-size: 14px; color: var(--ash);">ISF (mmol/L per U)</h4>
+  <div class="segments" id="isf-segments"></div>
+  <button class="seg-add" onclick="addSegment('isf')">+ добави сегмент</button>
+
+  <h4 style="margin: 12px 0 8px; font-size: 14px; color: var(--ash);">CR (g per U)</h4>
+  <div class="segments" id="cr-segments"></div>
+  <button class="seg-add" onclick="addSegment('cr')">+ добави сегмент</button>
+
+  <div class="form-row" style="margin-top: 12px;">
+    <div class="field" style="flex:1"><label for="prof-notes">Бележка</label><textarea id="prof-notes" rows="2" placeholder="промени спрямо предишния, причина…"></textarea></div>
+  </div>
+
+  <div style="display: flex; gap: 8px; margin-top: 12px;">
+    <button class="btn primary" onclick="saveProfile()">Запиши</button>
+    <button class="btn" onclick="hideForm()">Откажи</button>
+  </div>
+</div>
+
+<div id="compare-section" style="display:none; margin-bottom: 24px;">
+  <h3 style="margin-bottom: 12px;">📊 Сравнение</h3>
+  <div class="form-row">
+    <div class="field"><label>Профил 1</label><select id="cmp1" onchange="renderCompare()"></select></div>
+    <div class="field"><label>Профил 2</label><select id="cmp2" onchange="renderCompare()"></select></div>
+  </div>
+  <div id="compare-body"></div>
+</div>
+
+<div id="profiles-list" class="profiles"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+function getApiKey() { return localStorage.getItem('diabet_api_key') || ''; }
+function getToken() { return localStorage.getItem('diabet_token') || ''; }
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}) };
+  const key = getApiKey();
+  const tok = getToken();
+  if (key) headers['X-API-Key'] = key;
+  if (tok) headers['Authorization'] = 'Bearer ' + tok;
+  const res = await fetch(API + path, { ...opts, headers });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || res.statusText);
+  }
+  return res.json();
+}
+
+let profiles = [];
+
+function toast(msg, err) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (err ? ' err' : '');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+async function loadProfiles() {
+  try {
+    profiles = await api('/api/profiles');
+    renderList();
+    loadActive();
+  } catch(e) { toast('Грешка: ' + e.message, true); }
+}
+
+async function loadActive() {
+  try {
+    const data = await api('/api/profiles/active');
+    const card = document.getElementById('active-card');
+    if (data.active) {
+      document.getElementById('active-name').textContent = data.active.name;
+      document.getElementById('active-date').textContent = 'от ' + data.active.active_from;
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+function miniChart(basal) {
+  const max = Math.max(...basal, 0.1);
+  return basal.map(v => `<div class="bar" style="height:${Math.round(v/max*28)}px" title="${v}"></div>`).join('');
+}
+
+function renderList() {
+  const box = document.getElementById('profiles-list');
+  if (!profiles.length) { box.innerHTML = '<p style="color:var(--ash)">Няма записани профили.</p>'; return; }
+  box.innerHTML = profiles.map(p => {
+    const total = p.basal.reduce((a,b) => a+b, 0).toFixed(2);
+    const isfStr = (p.isf||[]).map(s => s.value).join(' / ') || '—';
+    const crStr = (p.cr||[]).map(s => s.value).join(' / ') || '—';
+    return `<div class="profile-card" id="pc-${p.id}">
+      <div class="header">
+        <span class="name">${esc(p.name)}</span>
+        <span class="date">от ${p.active_from}</span>
+      </div>
+      <div class="basal-mini">${miniChart(p.basal)}</div>
+      <div class="total">Базал: ${total} U/ден · ISF: ${isfStr} · CR: ${crStr}</div>
+      ${p.notes ? `<div class="notes">${esc(p.notes)}</div>` : ''}
+      <div class="actions">
+        <button class="btn" onclick="editProfile(${p.id})">✏️ Редактирай</button>
+        <button class="btn danger" onclick="deleteProfile(${p.id}, '${esc(p.name)}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+// === FORM ===
+
+function buildBasalGrid() {
+  const grid = document.getElementById('basal-grid');
+  grid.innerHTML = '';
+  for (let h = 0; h < 24; h++) {
+    grid.innerHTML += `<div class="basal-cell"><label>${String(h).padStart(2,'0')}:00</label><input type="number" id="b-${h}" min="0" max="5" step="0.05" value="0.60" inputmode="decimal"></div>`;
+  }
+}
+
+function addSegment(type, from='00:00', value='') {
+  const box = document.getElementById(type + '-segments');
+  const idx = box.children.length;
+  const row = document.createElement('div');
+  row.className = 'seg-row';
+  row.innerHTML = `<span class="seg-label">от</span><input type="time" value="${from}" class="seg-from"><span class="seg-label">→</span><input type="number" step="0.1" min="0" max="20" value="${value}" placeholder="${type==='isf'?'mmol/L/U':'g/U'}" class="seg-val" inputmode="decimal"><button class="seg-del" onclick="this.parentElement.remove()">×</button>`;
+  box.appendChild(row);
+}
+
+function readSegments(type) {
+  const rows = document.getElementById(type + '-segments').querySelectorAll('.seg-row');
+  return Array.from(rows).map(r => ({
+    from: r.querySelector('.seg-from').value,
+    value: parseFloat(r.querySelector('.seg-val').value) || 0
+  })).filter(s => s.from && s.value > 0);
+}
+
+function showForm(profile) {
+  const sec = document.getElementById('form-section');
+  document.getElementById('form-title').textContent = profile ? 'Редактирай: ' + profile.name : 'Нов профил';
+  document.getElementById('edit-id').value = profile ? profile.id : '';
+  document.getElementById('prof-name').value = profile ? profile.name : '';
+  document.getElementById('prof-date').value = profile ? profile.active_from : new Date().toISOString().slice(0,10);
+  document.getElementById('prof-notes').value = profile ? profile.notes : '';
+
+  buildBasalGrid();
+  if (profile) {
+    profile.basal.forEach((v, h) => { document.getElementById('b-'+h).value = v; });
+  }
+
+  // ISF segments
+  const isfBox = document.getElementById('isf-segments');
+  isfBox.innerHTML = '';
+  if (profile && profile.isf && profile.isf.length) {
+    profile.isf.forEach(s => addSegment('isf', s.from, s.value));
+  } else {
+    addSegment('isf', '00:00', '');
+  }
+
+  // CR segments
+  const crBox = document.getElementById('cr-segments');
+  crBox.innerHTML = '';
+  if (profile && profile.cr && profile.cr.length) {
+    profile.cr.forEach(s => addSegment('cr', s.from, s.value));
+  } else {
+    addSegment('cr', '00:00', '');
+  }
+
+  sec.classList.add('visible');
+  sec.scrollIntoView({ behavior: 'smooth' });
+}
+
+function hideForm() {
+  document.getElementById('form-section').classList.remove('visible');
+  document.getElementById('edit-id').value = '';
+}
+
+async function saveProfile() {
+  const id = document.getElementById('edit-id').value;
+  const name = document.getElementById('prof-name').value.trim();
+  const active_from = document.getElementById('prof-date').value;
+  if (!name) { toast('Име е задължително', true); return; }
+  if (!active_from) { toast('Дата е задължителна', true); return; }
+
+  const basal = [];
+  for (let h = 0; h < 24; h++) {
+    basal.push(parseFloat(document.getElementById('b-'+h).value) || 0);
+  }
+
+  const isf = readSegments('isf');
+  const cr = readSegments('cr');
+  const notes = document.getElementById('prof-notes').value.trim();
+
+  const payload = { name, active_from, basal, isf, cr, notes };
+
+  try {
+    if (id) {
+      await api('/api/profiles/' + id, { method: 'PUT', body: JSON.stringify(payload) });
+      toast('Профилът е обновен');
+    } else {
+      await api('/api/profiles', { method: 'POST', body: JSON.stringify(payload) });
+      toast('Профилът е записан');
+    }
+    hideForm();
+    await loadProfiles();
+  } catch(e) { toast('Грешка: ' + e.message, true); }
+}
+
+function editProfile(id) {
+  const p = profiles.find(x => x.id === id);
+  if (p) showForm(p);
+}
+
+async function deleteProfile(id, name) {
+  if (!confirm('Изтрий профил „' + name + '"?')) return;
+  try {
+    await api('/api/profiles/' + id, { method: 'DELETE' });
+    toast('Изтрит');
+    await loadProfiles();
+  } catch(e) { toast('Грешка: ' + e.message, true); }
+}
+
+// === COMPARE ===
+
+function toggleCompare() {
+  const sec = document.getElementById('compare-section');
+  if (sec.style.display === 'none') {
+    sec.style.display = 'block';
+    const opts = profiles.map(p => `<option value="${p.id}">${esc(p.name)} (${p.active_from})</option>`).join('');
+    document.getElementById('cmp1').innerHTML = opts;
+    document.getElementById('cmp2').innerHTML = opts;
+    if (profiles.length > 1) document.getElementById('cmp2').selectedIndex = 1;
+    renderCompare();
+  } else {
+    sec.style.display = 'none';
+  }
+}
+
+function renderCompare() {
+  const id1 = parseInt(document.getElementById('cmp1').value);
+  const id2 = parseInt(document.getElementById('cmp2').value);
+  const p1 = profiles.find(p => p.id === id1);
+  const p2 = profiles.find(p => p.id === id2);
+  if (!p1 || !p2) return;
+
+  let html = '<table class="compare-table"><tr><th>Час</th><th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th><th>Δ</th></tr>';
+  for (let h = 0; h < 24; h++) {
+    const v1 = p1.basal[h], v2 = p2.basal[h];
+    const d = v2 - v1;
+    const cls = Math.abs(d) > 0.01 ? ' class="diff"' : '';
+    html += `<tr><td>${String(h).padStart(2,'0')}:00</td><td>${v1.toFixed(2)}</td><td>${v2.toFixed(2)}</td><td${cls}>${d > 0 ? '+' : ''}${d.toFixed(2)}</td></tr>`;
+  }
+  const t1 = p1.basal.reduce((a,b)=>a+b,0), t2 = p2.basal.reduce((a,b)=>a+b,0);
+  const dt = t2 - t1;
+  html += `<tr style="font-weight:bold"><td>Общо</td><td>${t1.toFixed(2)}</td><td>${t2.toFixed(2)}</td><td class="diff">${dt > 0 ? '+' : ''}${dt.toFixed(2)}</td></tr>`;
+  html += '</table>';
+
+  // ISF comparison
+  if ((p1.isf && p1.isf.length) || (p2.isf && p2.isf.length)) {
+    html += '<h4 style="margin:12px 0 6px;font-size:13px;color:var(--ash)">ISF</h4>';
+    html += '<table class="compare-table"><tr><th>От</th><th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th></tr>';
+    const allTimes = [...new Set([...(p1.isf||[]).map(s=>s.from), ...(p2.isf||[]).map(s=>s.from)])].sort();
+    for (const t of allTimes) {
+      const v1 = (p1.isf||[]).find(s=>s.from===t);
+      const v2 = (p2.isf||[]).find(s=>s.from===t);
+      html += `<tr><td>${t}</td><td>${v1 ? v1.value : '—'}</td><td>${v2 ? v2.value : '—'}</td></tr>`;
+    }
+    html += '</table>';
+  }
+
+  // CR comparison
+  if ((p1.cr && p1.cr.length) || (p2.cr && p2.cr.length)) {
+    html += '<h4 style="margin:12px 0 6px;font-size:13px;color:var(--ash)">CR</h4>';
+    html += '<table class="compare-table"><tr><th>От</th><th>' + esc(p1.name) + '</th><th>' + esc(p2.name) + '</th></tr>';
+    const allTimes = [...new Set([...(p1.cr||[]).map(s=>s.from), ...(p2.cr||[]).map(s=>s.from)])].sort();
+    for (const t of allTimes) {
+      const v1 = (p1.cr||[]).find(s=>s.from===t);
+      const v2 = (p2.cr||[]).find(s=>s.from===t);
+      html += `<tr><td>${t}</td><td>${v1 ? v1.value : '—'}</td><td>${v2 ? v2.value : '—'}</td></tr>`;
+    }
+    html += '</table>';
+  }
+
+  document.getElementById('compare-body').innerHTML = html;
+}
+
+// === INIT ===
+buildBasalGrid();
+loadProfiles();
+</script>
+</body>
+</html>

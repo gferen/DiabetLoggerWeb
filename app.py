@@ -175,6 +175,20 @@ def migrate_db():
             )
         """)
 
+        # Basal profile versions (pump settings history)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS basal_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                active_from TEXT NOT NULL,
+                basal TEXT NOT NULL,
+                isf TEXT NOT NULL DEFAULT '[]',
+                cr TEXT NOT NULL DEFAULT '[]',
+                notes TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         # If we're upgrading from v2 with a CHECK constraint that excludes 'ketones',
         # rebuild the table without CHECK.
         row = c.execute(
@@ -1144,6 +1158,15 @@ class DayProfileIn(BaseModel):
     notes: Optional[str] = Field("", max_length=2000)
 
 
+class BasalProfileIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    active_from: str  # YYYY-MM-DD
+    basal: list  # 24 floats, one per hour
+    isf: Optional[list] = []  # list of {from: "HH:MM", value: float}
+    cr: Optional[list] = []  # list of {from: "HH:MM", value: float}
+    notes: Optional[str] = Field("", max_length=2000)
+
+
 def _valid_day(day: str) -> str:
     try:
         return datetime.strptime(day, "%Y-%m-%d").date().isoformat()
@@ -1271,6 +1294,88 @@ def day_response(date: Optional[str] = None):
             "С храна в същото време — Δ/U не е чиста корекция." if food_xe is not None
             else "Без храна в същото време — Δ/U е чист корекционен ефект."
         ),
+    }
+
+
+# ============= BASAL PROFILES =============
+
+@app.get("/api/profiles", dependencies=[Depends(check_auth)])
+def list_profiles():
+    with db() as c:
+        rows = c.execute(
+            "SELECT id, name, active_from, basal, isf, cr, notes, created_at "
+            "FROM basal_profiles ORDER BY active_from DESC"
+        ).fetchall()
+    result = []
+    for r in rows:
+        result.append({
+            "id": r["id"], "name": r["name"], "active_from": r["active_from"],
+            "basal": json.loads(r["basal"]), "isf": json.loads(r["isf"]),
+            "cr": json.loads(r["cr"]), "notes": r["notes"],
+            "created_at": r["created_at"],
+        })
+    return result
+
+
+@app.post("/api/profiles", dependencies=[Depends(check_auth)])
+def create_profile(p: BasalProfileIn):
+    active = _valid_day(p.active_from)
+    if len(p.basal) != 24:
+        raise HTTPException(status_code=400, detail="basal must have exactly 24 values (one per hour)")
+    with db() as c:
+        cur = c.execute(
+            "INSERT INTO basal_profiles (name, active_from, basal, isf, cr, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (p.name, active, json.dumps(p.basal), json.dumps(p.isf or []),
+             json.dumps(p.cr or []), p.notes or ""),
+        )
+    return {"id": cur.lastrowid, "name": p.name, "active_from": active}
+
+
+@app.put("/api/profiles/{pid}", dependencies=[Depends(check_auth)])
+def update_profile(pid: int, p: BasalProfileIn):
+    active = _valid_day(p.active_from)
+    if len(p.basal) != 24:
+        raise HTTPException(status_code=400, detail="basal must have exactly 24 values (one per hour)")
+    with db() as c:
+        cur = c.execute(
+            "UPDATE basal_profiles SET name=?, active_from=?, basal=?, isf=?, cr=?, notes=? "
+            "WHERE id=?",
+            (p.name, active, json.dumps(p.basal), json.dumps(p.isf or []),
+             json.dumps(p.cr or []), p.notes or "", pid),
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Profile not found")
+    return {"id": pid, "name": p.name, "active_from": active}
+
+
+@app.delete("/api/profiles/{pid}", dependencies=[Depends(check_auth)])
+def delete_profile(pid: int):
+    with db() as c:
+        cur = c.execute("DELETE FROM basal_profiles WHERE id=?", (pid,))
+        if cur.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Profile not found")
+    return {"deleted": pid}
+
+
+@app.get("/api/profiles/active", dependencies=[Depends(check_auth)])
+def active_profile():
+    """Return the profile with the latest active_from that is <= today."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    with db() as c:
+        row = c.execute(
+            "SELECT id, name, active_from, basal, isf, cr, notes "
+            "FROM basal_profiles WHERE active_from <= ? ORDER BY active_from DESC LIMIT 1",
+            (today,),
+        ).fetchone()
+    if not row:
+        return {"active": None}
+    return {
+        "active": {
+            "id": row["id"], "name": row["name"], "active_from": row["active_from"],
+            "basal": json.loads(row["basal"]), "isf": json.loads(row["isf"]),
+            "cr": json.loads(row["cr"]), "notes": row["notes"],
+        }
     }
 
 
