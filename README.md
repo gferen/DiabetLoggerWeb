@@ -1,50 +1,49 @@
 # Diabet Logger
 
-Self-hosted тракер за захар, инсулин, хранене и CGM, с калкулатор на дозите и отчети за лекар и диетолог.
-FastAPI + SQLite + Chart.js, един контейнер.
+Self-hosted tracker for blood glucose, insulin, meals and CGM — with dose calculator and reports for doctor and dietitian.
+FastAPI + SQLite + Chart.js, single container.
 
 ![Diabet Logger](docs/screenshot.png)
 
 > **⚠️ Disclaimer:** This is a personal hobby project, NOT a certified medical device or clinical software. It is not intended to replace professional medical advice, diagnosis, or treatment. Dose calculations are suggestions only — always verify with your healthcare provider. Use entirely at your own risk.
->
-> Калкулаторите дават **предложение**, не медицински съвет. Дозата винаги я потвърждава човекът, който инжектира.
 
-## Какво може
+## Features
 
-- **Записи:** BG (mmol/L), бърз и бавен инсулин (U), кетони (mmol/L), хранене (XE), активност (мин), алкохол (ед.), смяна на устройство (ампула/сензор/пач помпа/основа помпа/смяна настройки)
-- **Поддръжка на помпа (Medtrum Nano):** при бърз инсулин — доставка (помпа/писалка/венозно), вид инсулин (Fiasp/NovoRapid/друг), вид болус (нормален/удължен/комбо с продължителност). При бавен — доставка и вид инсулин. В историята записите показват иконки за доставката и вида болус
-- **Източник на BG:** при ръчно измерване — свой глюкомер, болничен или CGM ръчно. Болничните измервания показват 🏥 в историята
-- **Кетони:** приемат стойност 0 (за нулев резултат при тест)
-- **CGM:** показанията от Juggluco се дърпат от телефона (`juggluco_pull.py`) и се записват като обикновени `bg` записи с бележка `[CGM]`. Ръчните измервания от BT глюкомер (напр. Contour Next One) се дърпат от Juggluco `/x/amounts` (TSV, етикет `Blood`, стойност в mmol/L) и се записват с бележка `[Глюкомер-BT]` и `meta.source: "own"`, с отделен watermark и дедупликация по време
-- **Time-in-Range** (Battelino et al. 2019), **GMI** (Bergenstal 2018), средна BG, SD, CV%
-- **График** със zoom и преместване по времето. CGM е тънка линия, ръчните измервания са точки. Филтри по период и по източник (BG + CGM / ръчни / само CGM). Маркери за храна (XE) и за лечение на ниска; бележката излиза при посочване
-- **История** с редакция на бележките на място (стойността и часът не се променят, това е умишлено: audit trail)
-- **Хранене (`/meal`):** калкулатор на доза по XE и текуща BG, вечерна доза, настройки на правилата
-- **Бутон „Ниска":** под статистиката — бързи въглехидрати с едно докосване (грамове × брой), с избор на дата и час (по подразбиране сега). Записва се като `meal` с `carbs_g`, XE по настройката `xe_grams_carbs` и бележка `[ХИПО] 5×3g`
-- **Бутон „Цигара":** брой (по подразбиране 1), бележка и час. Записва се като `activity` (5 мин, лека) с бележка `[ЦИГАРА] 2 бр.`, за проследяване на ефекта върху захарта
-- **Бутон „Нощен комплект":** предефинирани бързи (10 g) и опционално бавни въглехидрати, с час. За лечение на нощна ниска с измерено количество. Записва се като `meal` с бележка `[ХИПО] Нощен: 10g бързи + 8g бавни`
-- **Помпа панел:** четири бутона за бързи записи — ⚡ Темп базал (%, продължителност), 💉 Болус (единици, ръчен override), ⏸ Спиране (продължителност), 🔄 Възобновяване. Записват се като `device_change` с мета `temp_basal_pct`, `temp_basal_min` или `resume`
-- **Пач информация:** при смяна на устройство тип „Пач помпа" — полета за напълнено (U), остатък (U) и място на тялото (корем, ръка, крак, гръб — ляво/дясно). Показва се в историята: „Пач · 150U, ост. 45U, ръка Д"
-- **Етикети за периоди:** бутон 🏷️ Период за маркиране на времеви диапазони — 🏥 Болница, ✈️ Пътуване, 🤒 Болест, 😰 Стрес, 🏃 Активен ден, 📌 Друго. Всеки период има начална и крайна дата и бележка. Показва се като цветна лента на графиката и като запис в историята
-- **Тренд и скорошен инсулин:** до „Последна BG" стрелка и скорост на CGM за последните ~15 мин (→ ↗ ↑ ⇈ / ↘ ↓ ⇊; червено при ≥0.11 mmol/L/мин). Карта „Бърз 4ч": сумата бърз инсулин за последните 4 ч и часът на последната доза. Само за справка, не влизат в калкулаторите
-- **Дневен профил:** етикет за деня (Бърз / Нормален / Бавен) и бележка, само за справка
-- **Отчети:** `/report` за лекар, `/print-review` за диетолог (A4 за печат)
-- **Часова зона:** избира се от падащо меню в Настройки (виж "Часова зона")
-- **Login** (потребител и парола, JWT 30 дни) и/или **API key**, и двете по желание
-- **Автообновяване на 60 сек** (спира, докато редактираш бележка) и бутон „⟳ Обнови", който дърпа новите CGM показания
-- **Стрийм панел** за OBS — `static/overlay.html` (виж „Стрийм панел")
-- **Export / Import** JSON и CSV. CSV с избор на период (От / До, виж „Export CSV")
+- **Entries:** BG (mmol/L), rapid and slow insulin (U), ketones (mmol/L), meals (XE), activity (min), alcohol (units), device change (vial/sensor/patch pump/pump base/settings change)
+- **Pump support (Medtrum Nano):** rapid insulin — delivery (pump/pen/IV), insulin type (Fiasp/NovoRapid/other), bolus kind (normal/extended/combo with duration). Slow insulin — delivery and type. History shows icons for delivery and bolus kind
+- **BG source:** manual readings — own glucometer, hospital or manual CGM. Hospital readings show 🏥 in history
+- **Ketones:** accepts value 0 (for a negative test result)
+- **CGM:** readings from Juggluco are pulled from the phone (`juggluco_pull.py`) and stored as regular `bg` entries with note `[CGM]`. Manual BT glucometer readings (e.g. Contour Next One) are pulled from Juggluco `/x/amounts` (TSV, label "Blood", value in mmol/L) and stored with note `[Глюкомер-BT]` and `meta.source: "own"`, with separate watermark and deduplication by time
+- **Time-in-Range** (Battelino et al. 2019), **GMI** (Bergenstal 2018), mean BG, SD, CV%
+- **Chart** with zoom and pan over time. CGM as thin line, manual readings as dots. Filters by period and source (BG + CGM / manual only / CGM only). Meal markers (XE) and low treatment markers; notes shown on hover
+- **History** with inline note editing (value and time are immutable — intentional audit trail)
+- **Meal calculator (`/meal`):** dose by XE and current BG, evening dose, rule settings
+- **"Low" button:** below the stats — fast carbs with one tap (grams × count), with date/time picker (defaults to now). Stored as `meal` with `carbs_g`, XE per `xe_grams_carbs` setting and note `[HYPO] 5×3g`
+- **"Cigarette" button:** count (default 1), note and time. Stored as `activity` (5 min, light) with note `[CIGARETTE] 2 pcs.`, for tracking the effect on blood glucose
+- **"Night kit" button:** predefined fast carbs (10g) and optional slow carbs, with time. For treating nighttime lows with a measured amount. Stored as `meal` with note `[HYPO] Night: 10g fast + 8g slow`
+- **Pump panel:** four quick-entry buttons — ⚡ Temp Basal (%, duration), 💉 Bolus (units, manual override), ⏸ Suspend (duration), 🔄 Resume. Stored as `device_change` with meta `temp_basal_pct`, `temp_basal_min` or `resume`
+- **Patch info:** when changing device type "Patch pump" — fields for filled (U), remaining (U) and body site (abdomen, arm, leg, back — left/right). Shown in history: "Patch · 150U, rem. 45U, arm R"
+- **Period tags:** 🏷️ Period button for marking time ranges — 🏥 Hospital, ✈️ Travel, 🤒 Illness, 😰 Stress, 🏃 Active day, 📌 Other. Each period has start/end date and note. Shown as colored band on chart and as entry in history
+- **Trend and recent insulin:** next to "Last BG" — arrow and CGM rate for the last ~15 min (→ ↗ ↑ ⇈ / ↘ ↓ ⇊; red at ≥0.11 mmol/L/min). "Rapid 4h" card: sum of rapid insulin for last 4h and time of last dose. For reference only, not used by calculators
+- **Daily profile:** day label (Fast / Normal / Slow) and note, for reference only
+- **Reports:** `/report` for doctor, `/print-review` for dietitian (A4 print layout)
+- **Time zone:** selectable from dropdown in Settings (see "Time zone")
+- **Login** (username and password, JWT 30 days) and/or **API key**, both optional
+- **Auto-refresh every 60 sec** (pauses while editing a note) and "⟳ Refresh" button that pulls new CGM readings
+- **Stream overlay** for OBS — `static/overlay.html` (see "Stream overlay")
+- **Export / Import** JSON and CSV. CSV with period selection (From / To, see "Export CSV")
+- **i18n:** 9 languages (Bulgarian, English, German, Spanish, French, Portuguese, Italian, Dutch, Polish) with 586 translation keys. Language selector dropdown on main page. To add a language: copy `en.json` → `lang/xx.json`, add the code to `i18n.js`
 
-## Интерфейс
+## Interface
 
-Главната страница е mobile-first, с тъмна тема и шрифт Sofia Sans (с кирилски форми на буквите; идва от Google Fonts, а трите реда в `<head>` се махат за офлайн работа — остава системният шрифт).
+The main page is mobile-first, with dark theme and Sofia Sans font (with Cyrillic letterforms; loaded from Google Fonts — remove the three lines in `<head>` for offline use, falling back to system font).
 
-- **Последно показание** като едро число с цвят по зоната и скала отдолу, на която се виждат целевият диапазон 3.9–10 и къде попада стойността. Скалата е фиксирана 2–20 mmol/L, за да стои стабилна; над 20 маркерът опира в края.
-- **Графиката** сама нагласява мащаба си по данните. Кривата сменя цвят по зоната (в норма, високо, ниско), а целевият диапазон 3.9–10 е лента зад нея. Временният базал се показва като цветна лента: оранжева за повишен (>100%), синя за намален (<100%), червена за спиране (0%), с етикет на процента горе. Етикетите за периоди (болница, пътуване и др.) се виждат като бледи цветни ивици с иконка долу.
-- **Цветът означава данни:** рамката и бутоните са едноцветни, а цветно е само измереното и записаното. Табовете за нов запис носят цвета на типа, който записват.
-- На телефон долна лента води до разделите (Сега, Запис, График, История, Още); на широк екран записването стои вляво, а прегледите вдясно.
-- **Полетата за дата и час** следват часовника, докато не ги пипнеш; бутонът „Сега" ги връща. При запис непипнатото поле е текущият момент, не часът при отваряне на страницата.
-- Отворена направо от диск (`file://`, без сървър), страницата влиза в **демо режим** с измислени данни и надпис отгоре — за разглеждане, без нищо да се записва. Заредена от сървъра, демото не се включва.
+- **Last reading** as large number colored by zone, with a scale below showing the 3.9–10 target range and where the value falls. Scale is fixed 2–20 mmol/L for stability; above 20 the marker pins to the end.
+- **Chart** auto-scales to data. The line changes color by zone (in range, high, low), with the 3.9–10 target range as a band behind it. Temp basal shown as colored band: orange for increased (>100%), blue for decreased (<100%), red for suspended (0%), with percentage label on top. Period tags (hospital, travel, etc.) appear as faint colored strips with icon at bottom.
+- **Color means data:** frame and buttons are monochrome; color is reserved for measured and recorded values. New-entry tabs carry the color of the type they record.
+- On mobile, bottom bar navigates to sections (Now, Entry, Chart, History, More); on wide screens, entry stays on the left, views on the right.
+- **Date/time fields** follow the clock until touched; the "Now" button resets them. On save, an untouched field is the current moment, not the time when the page was opened.
+- Opened directly from disk (`file://`, no server), the page enters **demo mode** with fictional data and a banner — for browsing, nothing is saved. Loaded from a server, demo mode does not activate.
 
 ## Quick start
 
@@ -53,195 +52,193 @@ cd diabet-logger
 docker compose up -d --build
 ```
 
-Отвори `http://<server>:8765/`. Без auth по подразбиране (допустимо зад WireGuard / LAN).
+Open `http://<server>:8765/`. No auth by default (acceptable behind WireGuard / LAN).
 
-**Важно при промени:** `static/` не е bind mount, а се пакетира в образа. След промяна на `.html` или `.py` трябва `docker compose up -d --build`. Базата (`data/`) е bind mount и се запазва.
+**Important on changes:** `static/` is not a bind mount — it's baked into the image. After changing `.html` or `.py`, run `docker compose up -d --build`. The database (`data/`) is a bind mount and persists.
 
-## Конфигурация (`.env`)
+## Configuration (`.env`)
 
-| Променлива | По подразбиране | За какво |
+| Variable | Default | Purpose |
 |---|---|---|
-| `DIABET_USERNAME`, `DIABET_PASSWORD` | – | Вход от браузър (JWT) |
-| `DIABET_API_KEY` | – | `X-API-Key` за скриптове |
-| `DIABET_JWT_SECRET` | авто в `data/.jwt_secret` | Ключ за JWT; рестартът не обезсилва токените, ако `data/` се пази |
-| `DIABET_TOKEN_TTL_DAYS` | `30` | Валидност на токена |
-| `DIABET_TZ` | `Europe/Sofia` | Зона по подразбиране за дневните статистики и отчети. Може да се смени от Настройки (виж "Часова зона"); времената се пазят в UTC |
-| `JUGGLUCO_HOST` | – | Адрес на телефона с Juggluco (достъпен през WireGuard). Нужен за CGM синхронизацията |
-| `JUGGLUCO_PORT` | `17580` | Порт на webserver-а на Juggluco |
-| `JUGGLUCO_API_SECRET` | – | `api_secret` на Juggluco (auth в пътя на URL-а) |
-| `DIABET_LOGGER_API_KEY` | = `DIABET_API_KEY` | По желание: друг ключ само за `juggluco_pull.py`. По подразбиране скриптът ползва `DIABET_API_KEY` |
-| `DIABET_DB`, `DIABET_SECRET_FILE` | `/data/...` | Пътища вътре в контейнера |
+| `DIABET_USERNAME`, `DIABET_PASSWORD` | – | Browser login (JWT) |
+| `DIABET_API_KEY` | – | `X-API-Key` for scripts |
+| `DIABET_JWT_SECRET` | auto in `data/.jwt_secret` | JWT signing key; restart doesn't invalidate tokens if `data/` persists |
+| `DIABET_TOKEN_TTL_DAYS` | `30` | Token validity |
+| `DIABET_TZ` | `Europe/Sofia` | Default timezone for daily stats and reports. Can be changed from Settings (see "Time zone"); times are stored in UTC |
+| `JUGGLUCO_HOST` | – | Phone address running Juggluco (reachable via WireGuard). Required for CGM sync |
+| `JUGGLUCO_PORT` | `17580` | Juggluco webserver port |
+| `JUGGLUCO_API_SECRET` | – | Juggluco `api_secret` (auth in URL path) |
+| `DIABET_LOGGER_API_KEY` | = `DIABET_API_KEY` | Optional: separate key for `juggluco_pull.py`. By default it uses `DIABET_API_KEY` |
+| `DIABET_DB`, `DIABET_SECRET_FILE` | `/data/...` | Paths inside the container |
 
-`.env` е с права `600` и никога не влиза в git. Без нито една auth променлива приложението е отворено.
+`.env` has `600` permissions and never enters git. Without any auth variable the app is open.
 
-## Файлове
+## Files
 
 ```
 app.py                 FastAPI backend
-juggluco_pull.py       дърпа CGM от Juggluco на телефона (през WireGuard)
-juggluco_watermark.json докъде е стигнал последният pull
-dedupe.py              намира и чисти дублирани записи, по подразбиране само отчет (виж "Дубликати")
-logger2diabetesm.py    конвертор от Logger CSV към Diabetes:M ENTRIES формат за импорт
-static/i18n.js          i18n loader — зарежда езикови файлове, превключва с dropdown
-static/lang/*.json      преводи (bg, en, de, es, fr, pt, it, nl, pl) — за нов език: копирай en.json → xx.json, добави кода в i18n.js
-static/profiles.html   профили на помпата: базал, ISF, CR — история на настройките със сравнение
-qa.py                  QA тестове: python3 qa.py
+juggluco_pull.py       pulls CGM from Juggluco on the phone (via WireGuard)
+juggluco_watermark.json progress of last pull
+dedupe.py              finds and cleans duplicate entries, report-only by default (see "Duplicates")
+logger2diabetesm.py    converter from Logger CSV to Diabetes:M ENTRIES format for import
+static/i18n.js         i18n loader — loads language files, switches with dropdown
+static/lang/*.json     translations (bg, en, de, es, fr, pt, it, nl, pl) — for a new language: copy en.json → xx.json, add the code to i18n.js
+static/profiles.html   pump profiles: basal, ISF, CR — settings history with comparison
+qa.py                  QA tests: python3 qa.py
 static/                index.html, meal.html, report.html, print-review.html, cgm_view.html
 data/diabet.db         SQLite (bind mount)
 ```
 
-## Модел на данните
+## Data model
 
-Една таблица `entries` плюс помощни таблици.
+One `entries` table plus helper tables.
 
-| Колона | |
+| Column | |
 |---|---|
 | `type` | `bg`, `fast`, `slow`, `ketones`, `meal`, `activity`, `alcohol`, `device_change` |
-| `value` | BG/кетони mmol/L, инсулин U, хранене XE, активност мин, алкохол ед. (`device_change` = 0; видове: `ampule`, `sensor`, `patch`, `pump_base`, `settings_change`) |
-| `time` | ISO 8601, в UTC |
-| `notes` | свободен текст (единственото, което се редактира) |
-| `meal_time`, `carbs_g`, `meta` | по желание: начало на храненето, грамове въглехидрати, JSON с допълнения (напр. `{"intensity":"moderate"}` за активност, `{"device_type":"patch"}` за смяна устройство, `{"delivery":"pump","insulin_type":"fiasp","bolus_kind":"extended","bolus_duration_min":60}` за бърз инсулин, `{"source":"hospital"}` за BG, `{"device_type":"settings_change","temp_basal_pct":150,"temp_basal_min":60}` за темп базал, `{"device_type":"patch","patch_filled_u":200,"patch_remaining_u":45,"patch_site":"abdomen-R"}` за пач, `{"device_type":"period","period_type":"hospital","period_start":"2026-11-09","period_end":"2026-11-13"}` за период) |
+| `value` | BG/ketones mmol/L, insulin U, meal XE, activity min, alcohol units (`device_change` = 0; subtypes: `ampule`, `sensor`, `patch`, `pump_base`, `settings_change`) |
+| `time` | ISO 8601, in UTC |
+| `notes` | free text (the only editable field) |
+| `meal_time`, `carbs_g`, `meta` | optional: meal start time, grams of carbs, JSON extras (e.g. `{"intensity":"moderate"}` for activity, `{"device_type":"patch"}` for device change, `{"delivery":"pump","insulin_type":"fiasp","bolus_kind":"extended","bolus_duration_min":60}` for rapid insulin, `{"source":"hospital"}` for BG, `{"device_type":"settings_change","temp_basal_pct":150,"temp_basal_min":60}` for temp basal, `{"device_type":"patch","patch_filled_u":200,"patch_remaining_u":45,"patch_site":"abdomen-R"}` for patch, `{"device_type":"period","period_type":"hospital","period_start":"2026-11-09","period_end":"2026-11-13"}` for period) |
 
-- **`UNIQUE(type, time)`:** два записа от един тип със същото време не могат да съществуват. Повторен POST връща съществуващия запис с `"duplicate": true`, а importът пропуска дублираните. Следствие: два ръчни BG в една и съща минута се слепват в един.
-- **`settings`:** key-value. Ред `rules` са правилата на калкулатора (JSON), ред `timezone` е избраната часова зона.
-- **`day_profiles`:** `date` (локален ден), `profile` (`fast`/`normal`/`slow`), `notes`. Не влиза в `/api/export`.
-- **`basal_profiles`:** `id`, `name`, `active_from` (YYYY-MM-DD), `basal` (JSON, 24 стойности U/h), `isf` (JSON, сегменти `[{from, value}]`), `cr` (JSON, сегменти `[{from, value}]`), `notes`. История на настройките на помпата — кой профил кога е бил активен.
+- **`UNIQUE(type, time)`:** two entries of the same type at the same time cannot exist. A duplicate POST returns the existing entry with `"duplicate": true`, and import skips duplicates. Consequence: two manual BG readings in the same minute merge into one.
+- **`settings`:** key-value. Row `rules` holds the calculator rules (JSON), row `timezone` holds the selected timezone.
+- **`day_profiles`:** `date` (local day), `profile` (`fast`/`normal`/`slow`), `notes`. Not included in `/api/export`.
+- **`basal_profiles`:** `id`, `name`, `active_from` (YYYY-MM-DD), `basal` (JSON, 24 values U/h), `isf` (JSON, segments `[{from, value}]`), `cr` (JSON, segments `[{from, value}]`), `notes`. Pump settings history — which profile was active when.
 
 ## API
 
-Всичко е под `/api`. Auth (ако е конфигуриран): `X-API-Key: ...` или `Authorization: Bearer <jwt>`. Swagger: `http://<server>:8765/docs`.
+Everything under `/api`. Auth (if configured): `X-API-Key: ...` or `Authorization: Bearer <jwt>`. Swagger: `http://<server>:8765/docs`.
 
-| Method | Path | Описание |
+| Method | Path | Description |
 |---|---|---|
-| GET | `/api/health` | здраве, кои auth методи са включени, часова зона |
+| GET | `/api/health` | health, which auth methods are enabled, timezone |
 | POST | `/api/login` | `{username,password}` → `{token,expires_at}` |
-| GET | `/api/entries` | `?type=&from=&to=&limit=` (по подразбиране limit 20000) |
+| GET | `/api/entries` | `?type=&from=&to=&limit=` (default limit 20000) |
 | POST | `/api/entries` | `{type,value,time,notes,meal_time?,carbs_g?,meta?}` |
-| PATCH | `/api/entries/{id}` | `{notes}`, само бележките |
-| DELETE | `/api/entries/{id}` | изтрива един запис |
-| DELETE | `/api/entries` | изтрива ВСИЧКИ |
-| POST | `/api/cgm-sync` | пуска `juggluco_pull.py`; връща последния ред от изхода. Таймаут 120 сек (504 ако телефонът е недостъпен) |
-| GET | `/api/stats?days=14` | TIR, GMI, средна, SD, CV, инсулин на ден |
-| GET | `/api/report?from=&to=` | пълен отчет за лекар |
-| GET | `/api/export` | JSON, групиран по тип. `bg`, `ketones`, `meal` носят стойността в `value`, всички останали в `units` |
-| POST | `/api/import` | `{bg:[],fast:[],...,replace:bool}`, сливане с пропускане на дубликати |
-| GET / PUT | `/api/settings` | правилата на калкулатора (PUT е частичен) |
-| POST | `/api/settings/reset` | връща правилата по подразбиране |
-| POST | `/api/calc-dose` | `{bg,xe}` → препоръчана доза, разбивка, предупреждения |
-| POST | `/api/calc-evening?bg=` | вечерна бавна доза и препоръка за закуска |
-| GET / PUT / DELETE | `/api/timezone` | четене / избор `{timezone}` (IANA име, напр. `Europe/Sofia`) / връщане към `DIABET_TZ` |
-| GET | `/api/day-profiles` | `?from=&to=` (дати `YYYY-MM-DD`) |
-| PUT / DELETE | `/api/day-profiles/{date}` | `{profile,notes}` / изтриване |
-| GET | `/api/day-response?date=` | числа за първата бърза доза за деня: BG при дозата и след 2 и 3 ч |
-| GET | `/api/profiles` | всички базални профили, по `active_from` desc |
-| POST | `/api/profiles` | нов профил `{name, active_from, basal, isf, cr, notes}` |
-| PUT | `/api/profiles/{id}` | редакция на профил |
-| DELETE | `/api/profiles/{id}` | изтриване |
-| GET | `/api/profiles/active` | профилът с най-нов `active_from` ≤ днес |
+| PATCH | `/api/entries/{id}` | `{notes}`, notes only |
+| DELETE | `/api/entries/{id}` | deletes one entry |
+| DELETE | `/api/entries` | deletes ALL entries |
+| POST | `/api/cgm-sync` | runs `juggluco_pull.py`; returns last line of output. Timeout 120 sec (504 if phone unreachable) |
+| GET | `/api/stats?days=14` | TIR, GMI, mean, SD, CV, insulin per day |
+| GET | `/api/report?from=&to=` | full report for doctor |
+| GET | `/api/export` | JSON, grouped by type. `bg`, `ketones`, `meal` carry value in `value`, all others in `units` |
+| POST | `/api/import` | `{bg:[],fast:[],...,replace:bool}`, merge with duplicate skipping |
+| GET / PUT | `/api/settings` | calculator rules (PUT is partial) |
+| POST | `/api/settings/reset` | resets rules to defaults |
+| POST | `/api/calc-dose` | `{bg,xe}` → recommended dose, breakdown, warnings |
+| POST | `/api/calc-evening?bg=` | evening slow dose and snack recommendation |
+| GET / PUT / DELETE | `/api/timezone` | read / set `{timezone}` (IANA name, e.g. `Europe/Sofia`) / reset to `DIABET_TZ` |
+| GET | `/api/day-profiles` | `?from=&to=` (dates `YYYY-MM-DD`) |
+| PUT / DELETE | `/api/day-profiles/{date}` | `{profile,notes}` / delete |
+| GET | `/api/day-response?date=` | numbers for the first rapid dose of the day: BG at dose, at +2h and +3h |
+| GET | `/api/profiles` | all basal profiles, by `active_from` desc |
+| POST | `/api/profiles` | new profile `{name, active_from, basal, isf, cr, notes}` |
+| PUT | `/api/profiles/{id}` | edit profile |
+| DELETE | `/api/profiles/{id}` | delete |
+| GET | `/api/profiles/active` | profile with latest `active_from` ≤ today |
 
-Страници: `/` (главна), `/meal`, `/report`, `/print-review`, `/static/profiles.html` (профили на помпата).
+Pages: `/` (main), `/meal`, `/report`, `/print-review`, `/static/profiles.html` (pump profiles).
 
-## Калкулатор на дозите
+## Dose calculator
 
-Правилата живеят в таблицата `settings` и се редактират от `/meal` → Настройки (грамовете въглехидрати на 1 XE и от главната страница). **Стойностите по-долу са defaults в кода. Живите може да са различни, провери в Настройки.**
+Rules live in the `settings` table and are edited from `/meal` → Settings (grams of carbs per 1 XE can also be set from the main page). **Values below are code defaults. Live values may differ — check in Settings.**
 
 ```
-доза = XE × I:C + корекция
+dose = XE × I:C + correction
 ```
 
-| Правило | Default |
+| Rule | Default |
 |---|---|
-| I:C при BG ≥ 5 / при BG < 5 | 3.0 / 2.0 U за 1 XE |
-| Корекция при BG 10–13 / 13–16 / 16+ | +1 / +2 / +2 U |
-| BG < 4 | блокира инсулина (хипо) |
-| BG ≥ 15 | предупреждение: измери кетони |
-| бърз инсулин преди < 2 ч | предупреждение за stacking |
-| вечерен снак при BG ≤ | 6.0 (по подразбиране „до 200g кисело мляко") |
-| вечерна бавна доза | 15 U (фиксирана) |
-| 1 XE = | 12 g (в Настройки може да е друго, напр. 15 g) |
+| I:C at BG ≥ 5 / at BG < 5 | 3.0 / 2.0 U per 1 XE |
+| Correction at BG 10–13 / 13–16 / 16+ | +1 / +2 / +2 U |
+| BG < 4 | blocks insulin (hypo) |
+| BG ≥ 15 | warning: check ketones |
+| rapid insulin within < 2h | stacking warning |
+| evening snack if BG ≤ | 6.0 (default "up to 200g yogurt") |
+| evening slow dose | 15 U (fixed) |
+| 1 XE = | 12 g (can be changed in Settings, e.g. 15 g) |
 
-`/meal` записва храненето като 3 записа с един и същ час: BG, хранене и бърз инсулин.
+`/meal` stores a meal as 3 entries with the same timestamp: BG, meal and rapid insulin.
 
-## Дневен профил
+## Daily profile
 
-Етикет за деня и бележка, видими в панела „Дневен профил" и като ред в „История". Панелът показва и числа за първата бърза доза за деня (BG при дозата, след ~2 ч и ~3 ч, промяната и промяната на единица; без храна в същото време това е чист корекционен ефект).
+Day label and note, visible in the "Daily profile" panel and as a row in History. The panel also shows numbers for the first rapid dose of the day (BG at dose, at ~2h and ~3h, change and change per unit; without a meal at the same time, this is a pure correction effect).
 
-**Само за справка:** профилът не се чете от `calc-dose` и `calc-evening`, не променя дози и не влиза в export и отчети. Денят за `day-response` се смята по избраната часова зона.
+**For reference only:** the profile is not read by `calc-dose` or `calc-evening`, does not change doses and is not included in export or reports. The day for `day-response` is determined by the selected timezone.
 
-## Часова зона
+## Time zone
 
-Всички времена се пазят в UTC. Часовата зона определя само **къде свършва денят** за дневните статистики, отчетите, броенето на активните дни и дневния профил. Избира се от падащото меню в Настройки, а ако нищо не е избрано, важи `DIABET_TZ` (по подразбиране `Europe/Sofia`). Смяната не пренаписва данни и важи веднага.
+All times are stored in UTC. The timezone only determines **where the day ends** for daily stats, reports, active-day counting and daily profile. Selected from the dropdown in Settings; if nothing is selected, `DIABET_TZ` applies (default `Europe/Sofia`). Changing it does not rewrite data and takes effect immediately.
 
-Часовете, които виждаш и въвеждаш в браузъра, следват часовата зона на самото устройство. Когато зоната на сървъра и на устройството са различни, под менюто има предупреждение: денят в отчетите и часовете на екрана може да не съвпадат.
+The times you see and enter in the browser follow the device's own timezone. When the server and device timezones differ, a warning appears below the menu: the day in reports and the times on screen may not match.
 
-## Референтни диапазони
+## Reference ranges
 
-**BG (mmol/L):** `<3.0` много ниска · `3.0–3.8` ниска · `3.9–10.0` в диапазон · `10.1–13.9` висока · `>13.9` много висока
+**BG (mmol/L):** `<3.0` very low · `3.0–3.8` low · `3.9–10.0` in range · `10.1–13.9` high · `>13.9` very high
 
-**Кетони (кръвни, β-хидроксибутират, mmol/L):**
-- `<0.6` нормални
-- `0.6–1.5` повишени: проверка на BG, хидратация
-- `1.5–3.0` риск от DKA: контакт с лекар
-- `>3.0` спешно
+**Ketones (blood, β-hydroxybutyrate, mmol/L):**
+- `<0.6` normal
+- `0.6–1.5` elevated: check BG, hydrate
+- `1.5–3.0` DKA risk: contact doctor
+- `>3.0` emergency
 
-**TIR цели (T1D):** в диапазон >70%, <3.0 mmol/L под 1%, обща хипо под 4%, CV <36%.
+**TIR targets (T1D):** in range >70%, <3.0 mmol/L under 1%, total hypo under 4%, CV <36%.
 
-**GMI** е оценка по средната BG и не заменя лабораторно HbA1c. Валиден при 14+ дни редовни измервания. Със CGM всяко показание се брои като измерване, така че TIR и честотата на хипо вече са върху плътен поток от данни.
+**GMI** is an estimate from mean BG and does not replace lab HbA1c. Valid with 14+ days of regular readings. With CGM, every reading counts as a measurement, so TIR and hypo frequency are based on a dense data stream.
 
 ## CGM
 
-- `POST /api/cgm-sync` (бутонът „⟳ Обнови") пуска `juggluco_pull.py`, който дърпа новите показания от телефона през WireGuard и ги записва с бележка `[CGM]`. Прогресът се пази в `juggluco_watermark.json`, така че всеки pull е инкрементален.
-- **Конфигурация без тайни във файловете:** `JUGGLUCO_HOST`, `JUGGLUCO_PORT` и `JUGGLUCO_API_SECRET` са в `.env` и стигат до контейнера през `environment:` в `docker-compose.yml`. Скриптът ползва `DIABET_API_KEY` за достъп до приложението. Ако липсва променлива, излиза с код 2 и казва коя (без стойности). Върху хоста (ръчно или cron) скриптът чете и `.env` до себе си, а истинските променливи имат предимство.
-- **Страницата `/static/cgm_view.html`** (CGM + ръчни измервания) няма ключ в кода. Пита за API ключ при първо отваряне и го пази само в `localStorage` на браузъра, под същите имена като останалите страници (`diabet_api_key`, `diabet_token`). Бутонът „API ключ" го сменя, а при отказан достъп автообновяването спира.
-- Автообновяването на страницата само презарежда от базата. Ако искаш то да дърпа и от телефона, в `index.html` има константа `AUTO_SYNC_CGM` (по подразбиране `false`).
-- Повторно изпратено показание не се дублира заради `UNIQUE(type, time)`.
+- `POST /api/cgm-sync` (the "⟳ Refresh" button) runs `juggluco_pull.py`, which pulls new readings from the phone via WireGuard and stores them with note `[CGM]`. Progress is kept in `juggluco_watermark.json`, so each pull is incremental.
+- **Configuration without secrets in files:** `JUGGLUCO_HOST`, `JUGGLUCO_PORT` and `JUGGLUCO_API_SECRET` are in `.env` and reach the container through `environment:` in `docker-compose.yml`. The script uses `DIABET_API_KEY` for app access. If a variable is missing, it exits with code 2 and says which one (without values). On the host (manually or via cron) the script also reads `.env` next to itself, with real environment variables taking precedence.
+- **The `/static/cgm_view.html` page** (CGM + manual readings) has no key in the code. It prompts for the API key on first open and stores it only in the browser's `localStorage`, under the same keys as other pages (`diabet_api_key`, `diabet_token`). The "API key" button changes it; on denied access, auto-refresh stops.
+- Page auto-refresh only reloads from the database. If you want it to also pull from the phone, there's a constant `AUTO_SYNC_CGM` in `index.html` (default `false`).
+- Duplicate readings are prevented by `UNIQUE(type, time)`.
 
 ## Export CSV
 
-Бутонът „Export CSV" в Настройки тегли **целия** dataset от `/api/export` и го филтрира в браузъра.
+The "Export CSV" button in Settings downloads the **entire** dataset from `/api/export` and filters it in the browser.
 
-- **Период:** полетата „От" и „До" до бутона. Празни = всичко. Датите са местни дни, включително (00:00 на „От" до 23:59 на „До"). Ако „От" е след „До", нищо не се тегли.
-- **Име на файла:** `diabet-log-2026-10-24.csv`, а с период `diabet-log-2026-10-01_2026-10-24.csv`.
-- **Типове:** всички — `BG, FAST, SLOW, KETONES, MEAL, ACTIVITY, ALCOHOL, DEVICE_CHANGE`.
-- **Колони:** `type, time_utc, time_local, value, unit, notes, carbs_g, meal_time, meta`. `time_utc` е източникът на истината; `time_local` е за четене и следва часовата зона на устройството. `meta` е JSON (напр. `{"intensity":"moderate"}`).
-- **Мерни единици:** BG и кетони mmol/L, храна XE, инсулин U, активност min, алкохол бр. Стойностите са под 100, освен активността — до 600 минути (до 25.10.2026 и тя беше ограничена до 99).
-- **Бележки-маркери:** `[CGM]` за показания от сензора, `[ХИПО]` за лечение на ниска.
+- **Period:** "From" and "To" fields next to the button. Empty = everything. Dates are local days, inclusive (00:00 of "From" to 23:59 of "To"). If "From" is after "To", nothing is downloaded.
+- **Filename:** `diabet-log-2026-10-24.csv`, or with period `diabet-log-2026-10-01_2026-10-24.csv`.
+- **Types:** all — `BG, FAST, SLOW, KETONES, MEAL, ACTIVITY, ALCOHOL, DEVICE_CHANGE`.
+- **Columns:** `type, time_utc, time_local, value, unit, notes, carbs_g, meal_time, meta`. `time_utc` is the source of truth; `time_local` is for reading and follows the device timezone. `meta` is JSON (e.g. `{"intensity":"moderate"}`).
+- **Units:** BG and ketones mmol/L, meals XE, insulin U, activity min, alcohol count. Values are under 100, except activity — up to 600 minutes.
+- **Note markers:** `[CGM]` for sensor readings, `[HYPO]` for low treatment.
 
-> До 24.10.2026 CSV-то пишеше `undefined` за инсулина, защото четеше `value` вместо `units`, и изпускаше активност, алкохол и смяна на устройство. JSON експортът винаги е бил пълен.
+## Stream overlay
 
-## Стрийм панел
+`static/overlay.html` — a single panel with current glucose for OBS (Browser Source), transparent background, English text.
 
-`static/overlay.html` — един панел с текущата глюкоза за OBS (Browser Source), прозрачен фон, текст на английски.
+- **URL:** `http://<server>:8765/static/overlay.html#key=<DIABET_API_KEY>` — the part after `#` doesn't reach the server and doesn't appear in its logs. The key is stored in `localStorage`.
+- **Size:** 400×260; for larger and sharper — `&scale=2` and 800×520.
+- **Options:** `sync=0` — don't pull from phone, only read database; `every=60` — seconds between refreshes (min. 30).
+- **Data:** CGM for the last 3h. On each refresh, first calls `/api/cgm-sync` (pulls from Juggluco), then `/api/entries`.
+- **States:** green — normal; yellow — below 5 or drop ≥ 0.11 mmol/L/min; red "LOW · PAUSE" — below 4; grey — data older than 10 min.
+- No insulin, no manual readings — shows only what's appropriate for an audience.
 
-- **Адрес:** `http://<сървър>:8765/static/overlay.html#key=<DIABET_API_KEY>` — частта след `#` не стига до сървъра и не остава в логовете му. Ключът се запомня в `localStorage`.
-- **Размер:** 400×260; за по-голям и остър — `&scale=2` и 800×520.
-- **Опции:** `sync=0` — не тегли от телефона, само чете базата; `every=60` — секунди между обновяванията (мин. 30).
-- **Данни:** CGM за последните 3 ч. На всяко обновяване първо вика `/api/cgm-sync` (тегли от Juggluco), после `/api/entries`.
-- **Състояния:** зелено — нормално; жълто — под 5 или спад ≥ 0.11 mmol/L/мин; червено „LOW · PAUSE" — под 4; сиво — данните са по-стари от 10 мин.
-- Без инсулин и без ръчни измервания — показва само това, което е подходящо за публика.
+## Duplicates
 
-## Дубликати
+Duplicate = two or more entries with the same `(type, time)`. Occurs when `juggluco_watermark.json` is lost or after a repeated `juggluco_pull.py --full`, and silently skews TIR, mean and GMI.
 
-Дубликат = два или повече записа с еднакви `(type, time)`. Възниква при изгубен `juggluco_watermark.json` или при повторен `juggluco_pull.py --full` и тихо изкривява TIR, средната и GMI.
-
-При старт приложението се опитва да създаде `UNIQUE(type, time)`. Ако в базата вече има дубликати, индексът не се създава и в логовете има `[warn] UNIQUE(type,time) index NOT created`. Тогава:
+On startup, the app attempts to create `UNIQUE(type, time)`. If duplicates already exist in the database, the index is not created and the logs show `[warn] UNIQUE(type,time) index NOT created`. Then:
 
 ```bash
-cp data/diabet.db data/diabet.db.bak                  # backup първо
-DIABET_DB=data/diabet.db python3 dedupe.py            # само отчет, нищо не променя (dry run)
-DIABET_DB=data/diabet.db python3 dedupe.py --apply    # изтрива, пази записа с най-малък id, после създава индекса
+cp data/diabet.db data/diabet.db.bak                  # backup first
+DIABET_DB=data/diabet.db python3 dedupe.py            # report only, changes nothing (dry run)
+DIABET_DB=data/diabet.db python3 dedupe.py --apply    # deletes, keeps entry with smallest id, then creates index
 docker compose restart
 ```
 
-`DIABET_DB` по подразбиране сочи `/data/diabet.db` (пътят вътре в контейнера), затова от хоста се задава явно. Скриптът показва групите, в които дублираните записи имат **различни стойности**: това не са CGM resend-и и трябва да се прегледат на ръка, преди `--apply`.
+`DIABET_DB` defaults to `/data/diabet.db` (path inside the container), so it must be set explicitly from the host. The script shows groups where duplicate entries have **different values**: these are not CGM resends and should be reviewed manually before `--apply`.
 
 ## Backup
 
 ```bash
-# ръчно
+# manual
 cp data/diabet.db backup/diabet-$(date +%F).db
 
-# cron 03:00 всеки ден
+# cron 03:00 daily
 0 3 * * * cp /path/diabet-logger/data/diabet.db /backup/diabet-$(date +\%F).db
 ```
 
@@ -250,9 +247,9 @@ cp data/diabet.db backup/diabet-$(date +%F).db
 ```nginx
 server {
     listen 443 ssl http2;
-    server_name diabet.ferencak.net;
-    ssl_certificate     /etc/letsencrypt/live/diabet.ferencak.net/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/diabet.ferencak.net/privkey.pem;
+    server_name diabet.example.com;
+    ssl_certificate     /etc/letsencrypt/live/diabet.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/diabet.example.com/privkey.pem;
 
     client_max_body_size 10M;
 
@@ -266,10 +263,10 @@ server {
 }
 ```
 
-## Sync между устройства
+## Sync between devices
 
-Един URL, една база. Страницата се обновява на 60 сек. Login токенът важи 30 дни, per-device.
+One URL, one database. The page refreshes every 60 sec. Login token is valid 30 days, per device.
 
-## Миграции
+## Migrations
 
-Автоматични при старт: премахване на стария `CHECK` (v2 → v3), добавяне на колоните `meal_time`, `carbs_g`, `meta`, таблиците `settings`, `day_profiles` и `basal_profiles`. Данните се запазват.
+Automatic on startup: removal of old `CHECK` (v2 → v3), adding columns `meal_time`, `carbs_g`, `meta`, tables `settings`, `day_profiles` and `basal_profiles`. Data is preserved.
