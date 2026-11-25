@@ -16,7 +16,8 @@ const _supported = {
   de: '🇩🇪 Deutsch',
   es: '🇪🇸 Español',
   fr: '🇫🇷 Français',
-  pt: '🇧🇷 Português',
+  'pt-PT': '🇵🇹 Português',
+  'pt-BR': '🇧🇷 Português (Brasil)',
   it: '🇮🇹 Italiano',
   nl: '🇳🇱 Nederlands',
   pl: '🇵🇱 Polski'
