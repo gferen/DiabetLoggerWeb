@@ -433,6 +433,9 @@ count_after = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
 check(f"Post-migration: данните запазени ({count_before}→{count_after})", count_after == count_before)
 old_ids = [r[0] for r in conn.execute("SELECT id FROM entries ORDER BY id").fetchall()]
 check("Post-migration: ID-та запазени", old_ids == list(range(1, 51)))
+idx = {r[1] for r in conn.execute("PRAGMA index_list(entries)")}
+check("Post-migration: нов dedup индекс (type,time,value,meta)", 'idx_entries_dedup' in idx, idx)
+check("Post-migration: старият UNIQUE(type,time) е махнат", 'idx_entries_type_time' not in idx, idx)
 conn.close()
 
 # Можем ли да добавим ketones?
@@ -655,6 +658,36 @@ r3 = c_i.post('/api/entries', json={'type':'fast','value':4,'time':'2026-07-20T0
 check("Различен тип на същия timestamp минава",
       r3.status_code == 200 and r3.json().get('duplicate') is None)
 check("След това: 2 записа", len(c_i.get('/api/entries', headers=H2).json()) == 2)
+
+# --- A1: различна стойност в същата минута = НОВ запис (не тихо изгубен) ---
+c_i.delete('/api/entries', headers=H2)
+T = '2026-07-21T08:00:00+00:00'
+ra = c_i.post('/api/entries', json={'type':'bg','value':6.7,'time':T,'meta':{'source':'own'}}, headers=H2)
+rb = c_i.post('/api/entries', json={'type':'bg','value':12.5,'time':T,'meta':{'source':'own'}}, headers=H2)
+check("A1: същата минута, различна стойност → 200", rb.status_code == 200, rb.text[:150])
+check("A1: различна стойност НЕ е duplicate", rb.json().get('duplicate') is None and rb.json()['id'] != ra.json()['id'], rb.json())
+check("A1: 2 реда", len(c_i.get('/api/entries', headers=H2).json()) == 2)
+rc = c_i.post('/api/entries', json={'type':'bg','value':12.5,'time':T,'meta':{'source':'own'}}, headers=H2)
+check("A1: идентична стойност+meta → duplicate, същия id", rc.json().get('duplicate') is True and rc.json()['id'] == rb.json()['id'], rc.json())
+check("A1: пак 2 реда", len(c_i.get('/api/entries', headers=H2).json()) == 2)
+rd = c_i.post('/api/entries', json={'type':'bg','value':12.5,'time':T,'meta':{'source':'hospital'}}, headers=H2)
+check("A1: същата стойност, друг източник → нов ред", rd.json().get('duplicate') is None, rd.json())
+check("A1: 3 реда", len(c_i.get('/api/entries', headers=H2).json()) == 3)
+# CGM (meta=NULL) re-push остава идемпотентен — NULL не бива да е 'винаги различен'
+c_i.delete('/api/entries', headers=H2)
+cgm = [{'type':'bg','value':round(5+i*0.1,1),'time':f'2026-07-22T08:{i:02d}:00+00:00','notes':'[CGM]'} for i in range(10)]
+for e in cgm: c_i.post('/api/entries', json=e, headers=H2)
+dups = [c_i.post('/api/entries', json=e, headers=H2).json().get('duplicate') for e in cgm]
+check("A1: CGM re-sync идентичен batch → всички duplicate", all(d is True for d in dups), dups)
+check("A1: CGM re-sync → без дубли (10 реда)", len(c_i.get('/api/entries', headers=H2).json()) == 10)
+# batch: КЗ в заета минута с друга стойност се записва
+c_i.delete('/api/entries', headers=H2)
+c_i.post('/api/entries', json={'type':'bg','value':6.7,'time':T}, headers=H2)
+r = c_i.post('/api/entries/batch', json={'entries':[{'type':'bg','value':12.5,'time':T},{'type':'fast','value':1,'time':T}]}, headers=H2)
+check("A1: batch КЗ 12.5 в минута с 6.7 → записана (не duplicate)",
+      r.status_code == 200 and r.json()['entries'][0].get('duplicate') is None and r.json()['entries'][0]['value'] == 12.5, r.text[:200])
+vals = sorted(e['value'] for e in c_i.get('/api/entries?type=bg', headers=H2).json())
+check("A1: и двете КЗ са в базата [6.7, 12.5]", vals == [6.7, 12.5], vals)
 
 
 section("12. STRUCTURED ДАННИ — НОВИ ТИПОВЕ И ПОЛЕТА")
@@ -922,6 +955,80 @@ check("calc-dose bg=7 → 200", r.status_code == 200, f"got {r.status_code}")
 r = client.post('/api/calc-evening?bg=95', headers=H)
 check("calc-evening bg=95 → 422", r.status_code == 422, f"got {r.status_code}")
 client.delete('/api/entries', headers=H)
+
+
+# ========== 14. A1: МИГРАЦИЯ ОТ UNIQUE(type,time) ==========
+section("14. A1 — миграция на dedup индекса върху реална P0 схема")
+old_path = f'{TEST_DIR}/p0_schema.db'
+conn = sqlite3.connect(old_path)
+conn.execute("""CREATE TABLE entries (id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL,
+    value REAL NOT NULL, time TEXT NOT NULL, notes TEXT DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, meal_time TEXT, carbs_g REAL, meta TEXT)""")
+conn.execute("CREATE UNIQUE INDEX idx_entries_type_time ON entries(type, time)")
+for i in range(30):
+    conn.execute("INSERT INTO entries (type,value,time,notes,meta) VALUES (?,?,?,?,?)",
+                 ("bg", 5 + i * 0.1, f"2026-05-01T{i // 60:02d}:{i % 60:02d}:00+00:00", "[CGM]", None))
+conn.commit()
+before = [tuple(r) for r in conn.execute("SELECT id,type,value,time,notes,meta FROM entries ORDER BY id")]
+conn.close()
+os.environ['DIABET_DB'] = old_path
+os.environ['DIABET_SECRET_FILE'] = f'{TEST_DIR}/.jwt_secret_a1'
+if 'app' in sys.modules:
+    del sys.modules['app']
+import app as app_a1
+c_a1 = TestClient(app_a1.app)
+conn = sqlite3.connect(old_path)
+idx = {r[1] for r in conn.execute("PRAGMA index_list(entries)")}
+after = [tuple(r) for r in conn.execute("SELECT id,type,value,time,notes,meta FROM entries ORDER BY id")]
+conn.close()
+check("A1 миграция: старият UNIQUE(type,time) е махнат", 'idx_entries_type_time' not in idx, idx)
+check("A1 миграция: idx_entries_dedup е създаден", 'idx_entries_dedup' in idx, idx)
+check("A1 миграция: нито един ред не е променен", before == after, f"{len(before)} vs {len(after)}")
+HA1 = {'X-API-Key': os.environ.get('DIABET_API_KEY', '')}
+r = c_a1.post('/api/entries', json={'type':'bg','value':9.9,'time':'2026-05-01T00:00:00+00:00'}, headers=HA1)
+check("A1 миграция: нова стойност в заета минута → нов ред", r.status_code == 200 and r.json().get('duplicate') is None, r.text[:150])
+r = c_a1.post('/api/entries', json={'type':'bg','value':5.0,'time':'2026-05-01T00:00:00+00:00','notes':'[CGM]'}, headers=HA1)
+check("A1 миграция: CGM re-push на стар ред → duplicate", r.json().get('duplicate') is True, r.text[:150])
+
+
+# ========== 15. A2: БЕЗ ТИХО ОРЯЗВАНЕ НА 20k ==========
+section("15. A2 — /api/entries не реже тихо при голям обем")
+conn = sqlite3.connect(old_path)
+conn.execute("DELETE FROM entries")
+base = datetime(2025, 1, 1, tzinfo=timezone.utc)
+conn.executemany("INSERT INTO entries (type,value,time,notes) VALUES ('bg',?,?,'[CGM]')",
+                 [(5 + (i % 50) / 10, (base + timedelta(minutes=5 * i)).isoformat()) for i in range(25000)])
+conn.commit(); conn.close()
+oldest = base.isoformat()
+r = c_a1.get('/api/entries', headers=HA1)
+rows = r.json()
+check("A2: без limit → всички 25000 реда", len(rows) == 25000, len(rows))
+check("A2: най-старият запис е включен", rows[-1]['time'] == oldest, rows[-1]['time'] if rows else None)
+check("A2: без limit → няма X-Truncated", 'x-truncated' not in r.headers)
+r = c_a1.get('/api/entries?limit=0', headers=HA1)
+check("A2: limit=0 → всички", len(r.json()) == 25000, len(r.json()))
+r = c_a1.get('/api/entries?limit=100', headers=HA1)
+check("A2: limit=100 → 100 реда", len(r.json()) == 100)
+check("A2: limit=100 → X-Truncated: true", r.headers.get('x-truncated') == 'true', dict(r.headers))
+check("A2: limit=100 → X-Total-Count: 25000", r.headers.get('x-total-count') == '25000', dict(r.headers))
+r = c_a1.get('/api/entries?limit=30000', headers=HA1)
+check("A2: limit над общия брой → X-Truncated: false", r.headers.get('x-truncated') == 'false')
+r = c_a1.get('/api/entries?from=2025-01-01&to=2025-01-02', headers=HA1)
+check("A2: стар период (from/to) → най-старите редове", len(r.json()) == 576 and r.json()[-1]['time'] == oldest, len(r.json()))
+r = c_a1.get('/api/entries?limit=-1', headers=HA1)
+check("A2: limit=-1 → 422", r.status_code == 422)
+r = c_a1.get('/api/export', headers=HA1)
+check("A2: export съдържа всички 25000 bg", len(r.json().get('bg', [])) == 25000)
+
+
+# ========== 16. P5: CACHE HEADERS ==========
+section("16. P5 — статиката се ревалидира (no-cache), API не се пипа")
+r = c_a1.get('/static/i18n.js')
+check("/static/i18n.js → Cache-Control: no-cache", r.headers.get('cache-control') == 'no-cache', dict(r.headers))
+r = c_a1.get('/')
+check("/ (index.html) → Cache-Control: no-cache", r.headers.get('cache-control') == 'no-cache')
+r = c_a1.get('/api/health')
+check("/api/health → без no-cache", r.headers.get('cache-control') != 'no-cache')
 
 
 # ========== FINAL REPORT ==========

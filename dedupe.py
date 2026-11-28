@@ -2,7 +2,8 @@
 """
 Намира (и по желание изтрива) дублирани записи в Diabet Logger базата.
 
-Дубликат = два или повече записа с еднакви (type, time). Възниква при изгубен
+Дубликат = два или повече записа с еднакви (type, time, value, meta).
+Различна стойност в същата минута НЕ е дубликат — това е отделно измерване. Възниква при изгубен
 juggluco watermark или повторен `juggluco_pull.py --full`. Изкривява
 TIR/mean/GMI без никакъв видим признак.
 
@@ -31,9 +32,9 @@ def main():
     conn.row_factory = sqlite3.Row
 
     groups = conn.execute("""
-        SELECT type, time, COUNT(*) AS n, MIN(id) AS keep_id
+        SELECT type, time, value, COALESCE(meta, '') AS m, COUNT(*) AS n, MIN(id) AS keep_id
         FROM entries
-        GROUP BY type, time
+        GROUP BY type, time, value, COALESCE(meta, '')
         HAVING COUNT(*) > 1
         ORDER BY time
     """).fetchall()
@@ -52,8 +53,9 @@ def main():
     conflicting = 0
     for g in groups[:20]:
         rows = conn.execute(
-            "SELECT id, value, notes FROM entries WHERE type=? AND time=? ORDER BY id",
-            (g["type"], g["time"]),
+            "SELECT id, value, notes FROM entries WHERE type=? AND time=? AND value=? "
+            "AND COALESCE(meta, '')=? ORDER BY id",
+            (g["type"], g["time"], g["value"], g["m"]),
         ).fetchall()
         vals = {r["value"] for r in rows}
         flag = ""
@@ -76,18 +78,18 @@ def main():
 
     cur = conn.execute("""
         DELETE FROM entries
-        WHERE id NOT IN (SELECT MIN(id) FROM entries GROUP BY type, time)
+        WHERE id NOT IN (SELECT MIN(id) FROM entries GROUP BY type, time, value, COALESCE(meta, ''))
     """)
     conn.commit()
     print(f"\n[done] изтрити {cur.rowcount} записа")
 
     try:
         conn.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_entries_type_time "
-            "ON entries(type, time)"
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_entries_dedup "
+            "ON entries(type, time, value, COALESCE(meta, ''))"
         )
         conn.commit()
-        print("[done] UNIQUE(type,time) индексът е създаден")
+        print("[done] UNIQUE(type,time,value,meta) индексът е създаден")
     except sqlite3.IntegrityError as e:
         print(f"[error] индексът пак не мина: {e}")
     conn.close()

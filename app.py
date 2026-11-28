@@ -19,7 +19,7 @@ from typing import Optional, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import jwt
-from fastapi import FastAPI, HTTPException, Header, Depends, Query, Request
+from fastapi import FastAPI, HTTPException, Header, Depends, Query, Request, Response
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -216,22 +216,28 @@ def migrate_db():
             c.execute("CREATE INDEX IF NOT EXISTS idx_entries_time ON entries(time)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_entries_type ON entries(type)")
 
-        # Dedup guard: one reading per (type, timestamp). Non-fatal — if the
-        # existing DB already has duplicates the index cannot be created, so we
-        # warn instead of refusing to boot. Run dedupe.py, then restart.
+        # Dedup guard. A row is a duplicate only if type, time, value AND meta
+        # (source etc.) are all identical — a CGM/meter re-push or a double tap.
+        # A DIFFERENT value in the same minute is a real, separate reading and
+        # must be kept (the old UNIQUE(type,time) silently dropped it).
+        # COALESCE: SQLite treats NULLs as distinct in UNIQUE, and CGM rows have
+        # meta = NULL — without it CGM re-pushes would no longer dedupe.
+        # Only an index change: no existing row is rewritten. The old key is
+        # stricter, so every existing DB satisfies the new one.
+        c.execute("DROP INDEX IF EXISTS idx_entries_type_time")
         try:
             c.execute(
-                "CREATE UNIQUE INDEX IF NOT EXISTS idx_entries_type_time "
-                "ON entries(type, time)"
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_entries_dedup "
+                "ON entries(type, time, value, COALESCE(meta, ''))"
             )
         except sqlite3.IntegrityError:
             groups = c.execute(
                 "SELECT COUNT(*) FROM ("
-                "  SELECT type, time FROM entries GROUP BY type, time HAVING COUNT(*) > 1"
+                "  SELECT 1 FROM entries GROUP BY type, time, value, COALESCE(meta, '') HAVING COUNT(*) > 1"
                 ")"
             ).fetchone()[0]
             print(
-                f"[warn] UNIQUE(type,time) index NOT created — {groups} duplicate "
+                f"[warn] UNIQUE dedup index NOT created — {groups} duplicate "
                 f"group(s) in DB. Run 'python3 dedupe.py --apply', then restart."
             )
 
@@ -360,6 +366,18 @@ def check_auth(
             return True
 
     raise HTTPException(status_code=401, detail="Unauthorized")
+
+
+# ---------- CACHING ----------
+# static/ is bind-mounted (P5): a changed file must show up on a plain refresh.
+# "no-cache" = the browser may keep a copy but must revalidate (ETag → cheap
+# 304), so it never runs stale HTML/JS against a newer API.
+@app.middleware("http")
+async def _no_stale_static(request: Request, call_next):
+    response = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 # ---------- VALIDATION ERRORS ----------
@@ -639,11 +657,15 @@ def calc_evening(bg: float = Query(..., gt=0, le=30)):
 
 @app.get("/api/entries", dependencies=[Depends(check_auth)])
 def list_entries(
+    response: Response,
     type: Optional[str] = None,
-    limit: int = 20000,
+    limit: Optional[int] = Query(default=None, ge=0),
     from_: Optional[str] = Query(default=None, alias="from"),
     to: Optional[str] = None,
 ):
+    """Newest first. No `limit` (or limit=0) = every matching row — the result
+    is never silently cut. With an explicit limit, X-Total-Count and
+    X-Truncated tell the caller whether rows were left out."""
     from_iso = None
     to_iso = None
     if from_:
@@ -674,8 +696,13 @@ def list_entries(
         if to_iso:
             query += " AND time <= ?"
             params.append(to_iso)
-        query += " ORDER BY time DESC LIMIT ?"
-        params.append(limit)
+        query += " ORDER BY time DESC"
+        if limit:
+            total = c.execute(f"SELECT COUNT(*) FROM ({query})", params).fetchone()[0]
+            query += " LIMIT ?"
+            params.append(limit)
+            response.headers["X-Total-Count"] = str(total)
+            response.headers["X-Truncated"] = "true" if total > limit else "false"
         rows = c.execute(query, params).fetchall()
         result = []
         for r in rows:
@@ -738,12 +765,12 @@ def _insert_entry(c, entry: EntryIn, t: str, meal_time_iso):
             (entry.type, entry.value, t, entry.notes or "", meal_time_iso, entry.carbs_g, meta_json),
         )
     except sqlite3.IntegrityError:
-        # Same (type, time) already logged — CGM resend or double tap.
-        # Idempotent: return the existing row, do not insert a second copy.
+        # Identical reading already logged (same type, time, value, meta) —
+        # CGM resend or double tap. Idempotent: return the existing row.
         row = c.execute(
             "SELECT id, type, value, time, notes, meal_time, carbs_g, meta "
-            "FROM entries WHERE type=? AND time=?",
-            (entry.type, t),
+            "FROM entries WHERE type=? AND time=? AND value=? AND COALESCE(meta, '')=COALESCE(?, '')",
+            (entry.type, t, entry.value, meta_json),
         ).fetchone()
         if row is None:
             raise
