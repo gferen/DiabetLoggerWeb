@@ -1068,6 +1068,41 @@ check("успешен sync → 200", r.status_code == 200, r.status_code)
 check("успешен sync → обобщението има CGM и MBG", 'CGM: pushed 3/3' in summ and 'MBG' in summ, summ)
 
 
+# ========== 19. P4: ЕПИЗОДИ В ОТЧЕТА ==========
+section("19. P4 — хипо/хипер епизоди (15 мин), глюкомер наблизо")
+c_a1.delete('/api/entries', headers=HA1)
+D = '2026-03-10'
+def post(v, hm, notes='[CGM]', meta=None):
+    body = {'type':'bg','value':v,'time':f'{D}T{hm}:00+00:00','notes':notes}
+    if meta: body['meta'] = meta
+    r = c_a1.post('/api/entries', json=body, headers=HA1); assert r.status_code == 200, r.text
+post(3.5, '08:00'); post(3.2, '08:05'); post(2.8, '08:07'); post(3.6, '08:12')      # ep1 (gaps ≤ 15)
+post(3.1, '08:10', notes='', meta={'source':'own'})                                  # meter inside ep1
+post(3.0, '08:09', notes='', meta={'source':'cgm_manual'})                           # cgm_manual ≠ meter
+post(6.0, '08:20')                                                                   # back in range
+post(3.4, '08:40')                                                                   # ep2 (28 min gap)
+post(15.0, '12:00'); post(16.2, '12:10'); post(14.5, '12:24')                        # hyper ep (gaps ≤ 15)
+post(17.0, '18:00')                                                                  # hyper ep2
+rep = c_a1.get(f'/api/report?from={D}&to={D}', headers=HA1).json()
+hy = rep['hypo']; hp = rep['hyper']
+check("P4: хипо епизоди = 2 (не 7 показания)", hy.get('episode_count') == 2, hy.get('episode_count'))
+check("P4: старите полета са непроменени (count_total = показания)", hy['count_total'] == 7, hy['count_total'])
+check("P4: тежки епизоди (<3.0) = 1", hy.get('episode_count_severe') == 1, hy.get('episode_count_severe'))
+ep1 = next(e for e in hy['episodes'] if e['start'].startswith(f'{D}T08:00'))
+check("P4: еп.1 начало 08:00, край 08:12, 12 мин", ep1['end'].startswith(f'{D}T08:12') and ep1['duration_min'] == 12, ep1)
+check("P4: еп.1 най-ниска 2.8", ep1['worst_value'] == 2.8, ep1)
+check("P4: еп.1 глюкомер = 3.1 (own), не cgm_manual 3.0", ep1['meter'] and ep1['meter']['value'] == 3.1, ep1['meter'])
+check("P4: глюкомер +3 мин от най-ниската", ep1['meter'] and ep1['meter']['minutes_from_worst'] == 3, ep1['meter'])
+ep2 = next(e for e in hy['episodes'] if e['start'].startswith(f'{D}T08:40'))
+check("P4: еп.2 без глюкомер наблизо", ep2['meter'] is None, ep2)
+check("P4: хипер епизоди = 2", hp.get('episode_count') == 2, hp.get('episode_count'))
+hp1 = next(e for e in hp['episodes'] if e['start'].startswith(f'{D}T12:00'))
+check("P4: хипер еп.1 връх 16.2, 3 показания", hp1['worst_value'] == 16.2 and hp1['readings'] == 3, hp1)
+c_a1.delete('/api/entries', headers=HA1)
+rep = c_a1.get(f'/api/report?from={D}&to={D}', headers=HA1).json()
+check("P4: празен период → 0 епизода, без грешка", rep['hypo']['episode_count'] == 0 and rep['hypo']['episodes'] == [])
+
+
 # ========== FINAL REPORT ==========
 print("\n" + "="*60)
 print(f"РЕЗУЛТАТ: {PASSED} passed, {FAILED} failed")

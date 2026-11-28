@@ -4,7 +4,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩸</text></svg>">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>За диетолог · Diabet Logger</title>
+<title data-i18n="title_print">За диетолог · Diabet Logger</title>
 <script src="/static/i18n.js?v=20261128"></script>
 <style>
   :root {
@@ -334,10 +334,12 @@ function render(entries, settings, report, from, to) {
           <div class="summary-cell"><div class="label">CV</div><div class="value">${report.bg_stats.cv_pct ?? '—'}<span class="unit">%</span></div></div>
           <div class="summary-cell"><div class="label">TIR (3.9–10)</div><div class="value">${report.tir.pct.in_range}<span class="unit">%</span></div></div>
           <div class="summary-cell"><div class="label">${t('print_hypo_label')}</div><div class="value" style="color:${(report.tir.pct.very_low+report.tir.pct.low)>4?'var(--danger)':'var(--text)'}">${(report.tir.pct.very_low+report.tir.pct.low).toFixed(1)}<span class="unit">%</span></div></div>
+          <div class="summary-cell"><div class="label">${t('print_hypo_episodes')}</div><div class="value">${report.hypo.episode_count ?? '—'}<span class="unit">${report.hypo.episode_count_severe ? '(' + report.hypo.episode_count_severe + ' &lt;3.0)' : ''}</span></div></div>
           <div class="summary-cell"><div class="label">${t('report_xe_total')}</div><div class="value">${report.meals ? report.meals.xe_total : 0}<span class="unit">XE</span></div></div>
           <div class="summary-cell"><div class="label">${t('print_tdd_day')}</div><div class="value">${report.insulin.tdd_per_active_day}<span class="unit">U</span></div></div>
           <div class="summary-cell"><div class="label">${t('report_real_ic')}</div><div class="value">${empIC ?? '—'}<span class="unit">U/XE</span></div></div>
         </div>
+        <div style="font-size:11px;color:var(--muted,#666);margin-top:6px">ⓘ ${t('report_sensor_disclaimer')}</div>
       </div>
     `);
   }

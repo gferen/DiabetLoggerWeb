@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="/static/i18n.js?v=20261128"></script>
-<title>Хранене · Diabet Logger</title>
+<title data-i18n="title_meal">Хранене · Diabet Logger</title>
 <style>
   :root {
     --bg: #0f1419; --panel: #1a2029; --panel-2: #232b37;
@@ -314,7 +314,7 @@ function fillBeerXE(liters) {
   const xe = Math.round((totalCarbs / gramsPerXE) * 2) / 2; // закръгля до 0.5 (стъпката на полето)
   document.getElementById('m-xe').value = xe;
   const foodEl = document.getElementById('m-food');
-  if (!foodEl.value.trim()) foodEl.value = `бира ${liters}л`;
+  if (!foodEl.value.trim()) foodEl.value = t('meal_beer_food', { l: liters });
   autoCalc();
 }
 

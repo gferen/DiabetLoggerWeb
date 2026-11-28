@@ -1100,6 +1100,7 @@ function makeDemo() {
             + bump(h, 19.6, 3.2) - bump(h, 23.4, 2.6, 0.7) + (rnd() - 0.5) * 0.5;
     add('bg', t, r1(Math.max(2.6, v)), '[CGM]');
   }
+  // i18n-ignore-start — demo sample NOTES are sample data (like real users' notes), not UI
   const pump = kind => ({ delivery: 'pump', insulin_type: 'fiasp', bolus_kind: kind });
   for (let k = 0; k < 7; k++) {
     add('bg', at(k, 7, 5), 7.9, 'на гладно', { meta: { source: 'own' } });
@@ -1122,6 +1123,7 @@ function makeDemo() {
   const profiles = {};
   const yesterday = shiftDay(nowLocalParts().date, -1);
   profiles[yesterday] = { date: yesterday, profile: 'slow', notes: 'плато 10–12 следобед' };
+  // i18n-ignore-end
   const settings = { xe_grams_carbs: 12 };
   let tz = 'Europe/Sofia';
 
@@ -1172,7 +1174,7 @@ function makeDemo() {
       if (!first) return { dose: null };
       return { dose: { time: first.time, units: first.value }, food_xe: 2, bg_at_dose: 8.4,
                points: [{ after_min: 120, bg: 10.9, delta: 2.5, delta_per_unit: 1.04 }, { after_min: 180, bg: 9.1, delta: 0.7, delta_per_unit: 0.29 }],
-               note: 'Демо данни, не са твои измервания.' };
+               note: t('demo_note') };
     }
     if (route === '/settings') { if (method === 'PUT') Object.assign(settings, body); return settings; }
     if (route === '/timezone') {
@@ -1180,14 +1182,14 @@ function makeDemo() {
       if (method === 'DELETE') tz = 'Europe/Sofia';
       return { timezone: tz, default: 'Europe/Sofia' };
     }
-    if (route === '/cgm-sync') return { summary: 'Демо: няма телефон за синхронизация' };
+    if (route === '/cgm-sync') return { summary: t('demo_no_phone') };
     if (route === '/export') {
       const out = {};
       list.forEach(e => (out[e.type] = out[e.type] || []).push(e));
       return out;
     }
     if (route === '/import') return { imported: 0 };
-    throw new Error('404: демо режимът не познава ' + route);
+    throw new Error(t('demo_unknown_route', { route }));
   };
 }
 

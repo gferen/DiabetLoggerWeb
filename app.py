@@ -945,6 +945,57 @@ def stats(days: int = 14):
 
 
 # ---------- API: EXPORT / IMPORT ----------
+# ---------- REPORT: EPISODES (P4) ----------
+EPISODE_GAP_MIN = 15      # readings of the same kind ≤ 15 min apart = one episode
+METER_WINDOW_MIN = 15     # meter (finger-stick) reading within ±15 min of an episode
+
+
+def _is_meter(r) -> bool:
+    """A finger-stick BG: anything that is not a CGM reading."""
+    notes = (r["notes"] or "")
+    if notes.startswith("[CGM]"):
+        return False
+    try:
+        meta = json.loads(r["meta"]) if r["meta"] else {}
+    except (ValueError, TypeError):
+        meta = {}
+    return meta.get("source") != "cgm_manual"
+
+
+def _episodes(bg_rows, in_episode, worst, meter_rows):
+    """Group consecutive qualifying readings into episodes. Purely descriptive —
+    nothing here feeds a calculator. `worst` picks min (hypo) or max (hyper)."""
+    pts = sorted(
+        ((datetime.fromisoformat(r["time"]), r) for r in bg_rows if in_episode(r["value"])),
+        key=lambda x: x[0],
+    )
+    meters = sorted(((datetime.fromisoformat(r["time"]), r) for r in meter_rows), key=lambda x: x[0])
+    groups = []
+    for t, r in pts:
+        if groups and (t - groups[-1][-1][0]) <= timedelta(minutes=EPISODE_GAP_MIN):
+            groups[-1].append((t, r))
+        else:
+            groups.append([(t, r)])
+    out = []
+    win = timedelta(minutes=METER_WINDOW_MIN)
+    for g in groups:
+        start, end = g[0][0], g[-1][0]
+        wt, wr = worst(g, key=lambda x: x[1]["value"])
+        near = [(abs((mt - wt).total_seconds()), mt, mr) for mt, mr in meters if start - win <= mt <= end + win]
+        meter = None
+        if near:
+            _, mt, mr = min(near, key=lambda x: x[0])
+            meter = {"time": mr["time"], "value": mr["value"],
+                     "minutes_from_worst": round((mt - wt).total_seconds() / 60)}
+        out.append({
+            "start": g[0][1]["time"], "end": g[-1][1]["time"],
+            "duration_min": round((end - start).total_seconds() / 60),
+            "worst_time": wr["time"], "worst_value": wr["value"],
+            "readings": len(g), "meter": meter,
+        })
+    return out
+
+
 @app.get("/api/report", dependencies=[Depends(check_auth)])
 def report(
     from_: str = Query(alias="from"),
@@ -973,7 +1024,7 @@ def report(
 
     with db() as c:
         rows = c.execute(
-            "SELECT id, type, value, time, notes FROM entries "
+            "SELECT id, type, value, time, notes, meta FROM entries "
             "WHERE time >= ? AND time <= ? ORDER BY time",
             (from_iso, to_iso),
         ).fetchall()
@@ -1017,6 +1068,11 @@ def report(
 
     # ---- Hyperglycemia ----
     hyper_severe = [r for r in bg if r["value"] > 13.9]
+
+    # ---- Episodes (P4): readings ≤ 15 min apart grouped; nearest meter reading ----
+    meter_bg = [r for r in bg if _is_meter(r)]
+    hypo_eps = _episodes(bg, lambda v: v < 3.9, min, meter_bg)
+    hyper_eps = _episodes(bg, lambda v: v > 13.9, max, meter_bg)
 
     # ---- Ketones ----
     ketones_max = max((r["value"] for r in ketones), default=None)
@@ -1116,6 +1172,9 @@ def report(
                 {"time": r["time"], "value": r["value"], "notes": r["notes"]}
                 for r in hypo_all[:10]
             ],
+            "episode_count": len(hypo_eps),
+            "episode_count_severe": sum(1 for e in hypo_eps if e["worst_value"] < 3.0),
+            "episodes": sorted(hypo_eps, key=lambda e: e["start"], reverse=True)[:50],
         },
         "hyper": {
             "count_severe": len(hyper_severe),
@@ -1123,6 +1182,8 @@ def report(
                 {"time": r["time"], "value": r["value"], "notes": r["notes"]}
                 for r in sorted(hyper_severe, key=lambda r: -r["value"])[:10]
             ],
+            "episode_count": len(hyper_eps),
+            "episodes": sorted(hyper_eps, key=lambda e: e["start"], reverse=True)[:50],
         },
         "ketones": {
             "max": ketones_max,

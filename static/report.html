@@ -401,6 +401,9 @@ function render(d) {
           <div>${t('report_level1')} <strong>${d.hypo.count_l1}</strong></div>
           <div style="color:var(--danger)">${t('report_severe_lt3')} <strong>${d.hypo.count_severe}</strong></div>
         </div>
+        ${d.hypo.episodes ? `
+          <h3>${t('report_episodes_hypo', { n: d.hypo.episode_count, s: d.hypo.episode_count_severe })}</h3>
+          ${episodesTable(d.hypo.episodes, 'report_ep_nadir')}` : ''}
         ${d.hypo.worst.length ? `
           <h3>${t('report_lowest')}</h3>
           <table>
@@ -424,6 +427,10 @@ function render(d) {
       <div class="panel no-break">
         <h2>${t('report_hyper_title')}</h2>
         <div style="margin-bottom: 10px; font-size: 13px;">${t('report_total_colon')} <strong>${d.hyper.count_severe}</strong></div>
+        ${d.hyper.episodes ? `
+          <h3>${t('report_episodes_hyper', { n: d.hyper.episode_count })}</h3>
+          ${episodesTable(d.hyper.episodes, 'report_ep_peak')}
+          <h3>${t('report_highest_readings')}</h3>` : ''}
         <table>
           <thead><tr><th>${t('report_when')}</th><th>${t('value')}</th><th>${t('report_note')}</th></tr></thead>
           <tbody>
@@ -609,10 +616,26 @@ function render(d) {
     `);
   }
 
+  parts.push(`<div class="panel no-break" style="font-size:12px;color:var(--muted,#666)">ⓘ ${t('report_sensor_disclaimer')}</div>`);
   document.getElementById('content').innerHTML = parts.join('');
 
   // Draw daily trace chart AFTER DOM is inserted
   drawChart(d);
+}
+
+// P4: hypo/hyper episodes (readings ≤ 15 min apart grouped) + nearest meter reading.
+function episodesTable(eps, worstLabelKey) {
+  if (!eps || !eps.length) return '';
+  return `
+    <table>
+      <thead><tr><th>${t('report_ep_start')}</th><th>${t('report_ep_duration')}</th><th>${t(worstLabelKey)}</th><th>${t('report_ep_meter')}</th></tr></thead>
+      <tbody>${eps.map(e => `<tr>
+        <td>${fmtDateTime(e.start)}</td>
+        <td>${t('report_ep_min', { n: e.duration_min })} · ${e.readings}×</td>
+        <td><span class="badge ${bgClass(e.worst_value)}">${e.worst_value} mmol/L</span></td>
+        <td>${e.meter ? `${e.meter.value} mmol/L <span style="color:var(--muted,#888)">(${e.meter.minutes_from_worst > 0 ? '+' : ''}${e.meter.minutes_from_worst} min)</span>` : '—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
 }
 
 let chart = null;
