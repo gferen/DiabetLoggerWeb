@@ -1101,6 +1101,14 @@ check("P4: хипер еп.1 връх 16.2, 3 показания", hp1['worst_va
 c_a1.delete('/api/entries', headers=HA1)
 rep = c_a1.get(f'/api/report?from={D}&to={D}', headers=HA1).json()
 check("P4: празен период → 0 епизода, без грешка", rep['hypo']['episode_count'] == 0 and rep['hypo']['episodes'] == [])
+# смесени времена: без отместване (API го приема) + с отместване в същия период
+c_a1.post('/api/entries', json={'type':'bg','value':3.3,'time':f'{D}T09:00:00'}, headers=HA1)          # naive
+c_a1.post('/api/entries', json={'type':'bg','value':3.1,'time':f'{D}T09:05:00+00:00'}, headers=HA1)   # aware
+c_a1.post('/api/entries', json={'type':'bg','value':3.0,'time':f'{D}T09:07:00Z','notes':'','meta':{'source':'own'}}, headers=HA1)
+r = c_a1.get(f'/api/report?from={D}&to={D}', headers=HA1)
+check("P4: смесени naive/aware времена → отчетът не гърми (200)", r.status_code == 200, r.status_code)
+check("P4: смесени времена → 1 епизод", r.status_code == 200 and r.json()['hypo']['episode_count'] == 1, r.text[:200])
+c_a1.delete('/api/entries', headers=HA1)
 
 
 # ========== 20. D: КАЛКУЛАТОРИ — characterization (текущо поведение, НЕ се променя) ==========

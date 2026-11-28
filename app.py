@@ -950,6 +950,14 @@ EPISODE_GAP_MIN = 15      # readings of the same kind ≤ 15 min apart = one epi
 METER_WINDOW_MIN = 15     # meter (finger-stick) reading within ±15 min of an episode
 
 
+def _utc(ts: str) -> datetime:
+    """Parse a stored time; a time without offset is taken as UTC (the API
+    accepts naive ISO strings). Mixing naive and aware datetimes would raise
+    TypeError when sorting/subtracting and the whole report would 500."""
+    dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
 def _is_meter(r) -> bool:
     """A finger-stick BG: anything that is not a CGM reading."""
     notes = (r["notes"] or "")
@@ -966,10 +974,10 @@ def _episodes(bg_rows, in_episode, worst, meter_rows):
     """Group consecutive qualifying readings into episodes. Purely descriptive —
     nothing here feeds a calculator. `worst` picks min (hypo) or max (hyper)."""
     pts = sorted(
-        ((datetime.fromisoformat(r["time"]), r) for r in bg_rows if in_episode(r["value"])),
+        ((_utc(r["time"]), r) for r in bg_rows if in_episode(r["value"])),
         key=lambda x: x[0],
     )
-    meters = sorted(((datetime.fromisoformat(r["time"]), r) for r in meter_rows), key=lambda x: x[0])
+    meters = sorted(((_utc(r["time"]), r) for r in meter_rows), key=lambda x: x[0])
     groups = []
     for t, r in pts:
         if groups and (t - groups[-1][-1][0]) <= timedelta(minutes=EPISODE_GAP_MIN):

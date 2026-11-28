@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # Deploy the current git HEAD to a Diabet Logger instance on NOMAD.
-#   tools/deploy_nomad.sh test            → ~/diabet-logger-test (port 8766, project diabet-logger-test)
-#   tools/deploy_nomad.sh live <label>    → /opt/diabet-logger  (port 8765) — backup first, always
+#   DEPLOY_HOST=user@host tools/deploy_nomad.sh test           → $DEPLOY_TEST_DIR (port 8766, project diabet-logger-test)
+#   DEPLOY_HOST=user@host tools/deploy_nomad.sh live <label>   → $DEPLOY_LIVE_DIR (port 8765) — backup first, always
 # Static is rsync'ed INTO the existing dir (bind mount follows the dir inode — never mv it).
 # app.py / Python / Dockerfile changes trigger a rebuild; static-only changes do not.
 set -euo pipefail
 TARGET=${1:?test|live}; LABEL=${2:-deploy}
-HOST=gferen@192.168.8.42
+# Host/paths come from the environment — nothing site-specific lives in this public repo.
+HOST=${DEPLOY_HOST:?set DEPLOY_HOST=user@host}
+LIVE_DIR=${DEPLOY_LIVE_DIR:-/opt/diabet-logger}
+TEST_DIR=${DEPLOY_TEST_DIR:-'~/diabet-logger-test'}
 case "$TARGET" in
-  test) DIR='~/diabet-logger-test'; PROJ='-p diabet-logger-test'; PORT=8766; CT=diabet-logger-test ;;
-  live) DIR=/opt/diabet-logger;     PROJ='';                       PORT=8765; CT=diabet-logger ;;
+  test) DIR=$TEST_DIR; PROJ='-p diabet-logger-test'; PORT=8766; CT=diabet-logger-test ;;
+  live) DIR=$LIVE_DIR; PROJ='';                       PORT=8765; CT=diabet-logger ;;
   *) echo "usage: $0 test|live [label]"; exit 2 ;;
 esac
 cd "$(git rev-parse --show-toplevel)"
