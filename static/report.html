@@ -412,7 +412,7 @@ function render(d) {
               ${d.hypo.worst.map(e => `<tr>
                 <td>${fmtDateTime(e.time)}</td>
                 <td><span class="badge ${bgClass(e.value)}">${e.value} mmol/L</span></td>
-                <td>${e.notes || '—'}</td>
+                <td>${e.notes ? escapeHtml(e.notes) : '—'}</td>
               </tr>`).join('')}
             </tbody>
           </table>
@@ -437,7 +437,7 @@ function render(d) {
             ${d.hyper.highest.map(e => `<tr>
               <td>${fmtDateTime(e.time)}</td>
               <td><span class="badge ${bgClass(e.value)}">${e.value} mmol/L</span></td>
-              <td>${e.notes || '—'}</td>
+              <td>${e.notes ? escapeHtml(e.notes) : '—'}</td>
             </tr>`).join('')}
           </tbody>
         </table>
@@ -465,7 +465,7 @@ function render(d) {
                 return `<tr>
                   <td>${fmtDateTime(e.time)}</td>
                   <td><span class="badge ${cls}">${e.value} mmol/L</span></td>
-                  <td>${e.notes || '—'}</td>
+                  <td>${e.notes ? escapeHtml(e.notes) : '—'}</td>
                 </tr>`;
               }).join('') || '<tr><td colspan="3" class="empty">' + t('report_all_normal') + '</td></tr>'}
             </tbody>
@@ -607,7 +607,7 @@ function render(d) {
                 <td>${fmtDateTime(n.time)}</td>
                 <td>${label}</td>
                 <td>${n.value} ${unit}</td>
-                <td>${n.notes}</td>
+                <td>${escapeHtml(n.notes)}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -622,6 +622,9 @@ function render(d) {
   // Draw daily trace chart AFTER DOM is inserted
   drawChart(d);
 }
+
+// Notes are user text — always escape before putting them into innerHTML.
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // P4: hypo/hyper episodes (readings ≤ 15 min apart grouped) + nearest meter reading.
 function episodesTable(eps, worstLabelKey) {
