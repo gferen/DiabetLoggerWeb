@@ -858,6 +858,19 @@ check("batch retry → 200", r.status_code == 200, r.text[:200])
 check("batch retry: всички duplicate=true", all(e.get('duplicate') for e in r.json().get('entries', [])))
 check("batch retry: пак 3 реда", n_entries() == 3, str(n_entries()))
 
+# --- корекция при 0 XE: КЗ + болус, БЕЗ meal ред (както го праща meal.html) ---
+client.delete('/api/entries', headers=H)
+r = client.post('/api/calc-dose', json={'bg': 12.5, 'xe': 0}, headers=H)
+check("calc-dose 0 XE → 200 (корекция)", r.status_code == 200, f"got {r.status_code}")
+T2 = '2027-01-05T08:00:00+00:00'
+r = client.post('/api/entries/batch', json={'entries': [
+    {'type':'bg','value':12.5,'time':T2,'notes':'корекция'},
+    {'type':'fast','value':2,'time':T2,'notes':'за корекция (авто-калк)'}]}, headers=H)
+check("0 XE: КЗ + корекционен болус → 200", r.status_code == 200, r.text[:200])
+rows = client.get('/api/entries', headers=H).json()
+check("0 XE: 2 реда (bg + fast)", sorted(e['type'] for e in rows) == ['bg', 'fast'], str([e['type'] for e in rows]))
+check("0 XE: няма meal ред", not any(e['type'] == 'meal' for e in rows))
+
 # --- невалиден 2-ри елемент → 422, НИЩО не е записано ---
 client.delete('/api/entries', headers=H)
 T1 = '2027-01-04T08:00:00+00:00'

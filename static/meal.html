@@ -403,7 +403,7 @@ document.addEventListener('input', (e) => {
 // BG > 30 (probably mg/dL): on confirm, put the converted value in the field and
 // re-run the dose calc via `recalc` — but do NOT save in this click: the dose on
 // screen belongs to the old value. The user reviews the new dose and saves again.
-function readValidNumber(id, { isBg = false, recalc = null } = {}) {
+function readValidNumber(id, { isBg = false, recalc = null, allowZero = false } = {}) {
   const inp = document.getElementById(id);
   const v = parseFloat(inp.value);
   if (isNaN(v)) { toast(t('toast_value_required'), 'error'); inp.focus(); return null; }
@@ -412,7 +412,7 @@ function readValidNumber(id, { isBg = false, recalc = null } = {}) {
     if (conv !== null) { inp.value = conv; if (recalc) recalc(); }
     return null;
   }
-  if (v <= 0) { toast(t('toast_value_positive'), 'error'); inp.focus(); return null; }
+  if (allowZero ? v < 0 : v <= 0) { toast(t('toast_value_positive'), 'error'); inp.focus(); return null; }
   const min = parseFloat(inp.min), max = parseFloat(inp.max);
   if ((!isNaN(min) && v < min) || (!isNaN(max) && v > max)) {
     toast(t('toast_value_range', { min: isNaN(min) ? 0 : min, max: isNaN(max) ? '∞' : max }), 'error');
@@ -429,7 +429,7 @@ async function saveMeal() {
   // Validate everything BEFORE anything is sent — no half-saved meal.
   const bg = readValidNumber('m-bg', { isBg: true, recalc: autoCalc });
   if (bg === null) return;
-  const xe = readValidNumber('m-xe');
+  const xe = readValidNumber('m-xe', { allowZero: true });   // 0 XE = correction bolus
   if (xe === null) return;
   const food = document.getElementById('m-food').value.trim();
   const useOverride = document.getElementById('m-override-chk').checked;
@@ -446,12 +446,14 @@ async function saveMeal() {
 
   try {
     // BG + meal (+ bolus) in ONE transaction: all saved or none.
+    // 0 XE = correction only: no meal row (meal type requires > 0), just BG + bolus.
     const entries = [
-      { type:'bg', value:bg, time:iso, notes: food ? `преди: ${food}` : 'преди хранене' },
-      { type:'meal', value:xe, time:iso, notes: food },
+      { type:'bg', value:bg, time:iso, notes: food ? `преди: ${food}` : (xe > 0 ? 'преди хранене' : 'корекция') },
     ];
+    if (xe > 0) entries.push({ type:'meal', value:xe, time:iso, notes: food });
     if (insulin !== null && insulin > 0) {
-      const insulinNotes = useOverride ? `override за ${xe} XE` : `за ${xe} XE (авто-калк)`;
+      const what = xe > 0 ? `${xe} XE` : 'корекция';
+      const insulinNotes = useOverride ? `override за ${what}` : `за ${what} (авто-калк)`;
       entries.push({ type:'fast', value:insulin, time:iso, notes: insulinNotes });
     }
     await api('/entries/batch', { method: 'POST', body: JSON.stringify({ entries }) });
