@@ -658,7 +658,7 @@
     <a href="/meal" target="_blank" rel="noopener" title="Хранене с XE калкулатор (в нов таб)" data-i18n="nav_meal" data-i18n-title="nav_meal_title">Хранене</a>
     <a href="/report" target="_blank" rel="noopener" title="Отчет за лекар (в нов таб)" data-i18n="nav_report" data-i18n-title="nav_report_title">Отчет за лекар</a>
     <a href="/print-review" target="_blank" rel="noopener" title="Разпечатка за диетолог (в нов таб)" data-i18n="nav_print" data-i18n-title="nav_print_title">За диетолог</a>
-    <script>document.write('<script src="' + (location.protocol === 'file:' ? 'i18n.js' : '/static/i18n.js') + '"><\/script>');</script>
+    <script>document.write('<script src="' + (location.protocol === 'file:' ? 'i18n.js' : '/static/i18n.js?v=20261128') + '"><\/script>');</script>
     <a href="/static/profiles.html" target="_blank" rel="noopener" title="Профили на помпата (базал, ISF, CR)" data-i18n="nav_profiles" data-i18n-title="nav_profiles_title">Профили</a>
     <select id="lang-select" style="background:var(--ink);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--paper);padding:4px 8px;cursor:pointer;font-size:13px;width:160px" title="Change language"></select>
   </nav>
@@ -2404,7 +2404,7 @@ async function clearDayProfile() {
     await api(`/day-profiles/${day}`, { method: 'DELETE' });
   } catch (e) {
     if (e.message === 'Unauthorized') return;
-    if (!e.message.startsWith('404')) { toast(e.message, true); return; }
+    if (e.status !== 404) { toast(e.message, true); return; }
   }
   dpDirty = false;
   document.getElementById('dp-notes').value = '';

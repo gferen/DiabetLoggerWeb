@@ -4,7 +4,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🩸</text></svg>">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="/static/i18n.js"></script>
+<script src="/static/i18n.js?v=20261128"></script>
 <title>Хранене · Diabet Logger</title>
 <style>
   :root {
@@ -400,14 +400,17 @@ document.addEventListener('input', (e) => {
 
 // Read a number input and check it against the input's min/max (and > 0).
 // Shows a toast and returns null if invalid. bg also gets the mg/dL hint.
-function readValidNumber(id, { isBg = false } = {}) {
+// BG > 30 (probably mg/dL): on confirm, put the converted value in the field and
+// re-run the dose calc via `recalc` — but do NOT save in this click: the dose on
+// screen belongs to the old value. The user reviews the new dose and saves again.
+function readValidNumber(id, { isBg = false, recalc = null } = {}) {
   const inp = document.getElementById(id);
-  let v = parseFloat(inp.value);
+  const v = parseFloat(inp.value);
   if (isNaN(v)) { toast(t('toast_value_required'), 'error'); inp.focus(); return null; }
-  if (isBg) {
-    v = bgMgdlGuard(v);
-    if (v === null) return null;
-    inp.value = v;
+  if (isBg && v > 30) {
+    const conv = bgMgdlGuard(v);
+    if (conv !== null) { inp.value = conv; if (recalc) recalc(); }
+    return null;
   }
   if (v <= 0) { toast(t('toast_value_positive'), 'error'); inp.focus(); return null; }
   const min = parseFloat(inp.min), max = parseFloat(inp.max);
@@ -424,7 +427,7 @@ async function saveMeal() {
   if (!dt) { toast(t('meal_invalid_datetime'), 'error'); return; }
   const iso = dt.toISOString();
   // Validate everything BEFORE anything is sent — no half-saved meal.
-  const bg = readValidNumber('m-bg', { isBg: true });
+  const bg = readValidNumber('m-bg', { isBg: true, recalc: autoCalc });
   if (bg === null) return;
   const xe = readValidNumber('m-xe');
   if (xe === null) return;
@@ -534,7 +537,7 @@ async function saveEvening() {
   const dt = readDatetime('e');
   if (!dt) { toast(t('meal_invalid_datetime'), 'error'); return; }
   const iso = dt.toISOString();
-  const bg = readValidNumber('e-bg', { isBg: true });
+  const bg = readValidNumber('e-bg', { isBg: true, recalc: autoCalcEvening });
   if (bg === null) return;
 
   const saveBtn = document.getElementById('e-save-btn');
