@@ -107,10 +107,14 @@ with sync_playwright() as pw:
     page.evaluate("document.getElementById('toast').classList.remove('show')")
     page.click("#cgm-sync-btn"); page.wait_for_function("document.getElementById('toast').classList.contains('show')", timeout=150000)
     tt = page.inner_text("#toast")
-    check(f"CGM sync без конфиг → ясно съобщение («{tt[:90]}»)", "not configured" in tt or "not reachable" in tt, tt)
-    check("CGM sync грешка → няма „[info] requesting“", "[info]" not in tt, tt)
-    page.wait_for_timeout(4000)
-    check("грешката стои видима ≥ 4 s", page.evaluate("document.getElementById('toast').classList.contains('show')"))
+    failed = page.evaluate("document.getElementById('toast').classList.contains('error')")
+    if failed:   # test instance: no Juggluco config → must be a classified, readable error
+        check(f"CGM sync грешка → ясно съобщение («{tt[:90]}»)", "not configured" in tt or "not reachable" in tt, tt)
+        check("CGM sync грешка → няма „[info] requesting“", "[info]" not in tt, tt)
+        page.wait_for_timeout(4000)
+        check("грешката стои видима ≥ 4 s", page.evaluate("document.getElementById('toast').classList.contains('show')"))
+    else:        # live: a real sync — the toast must report what happened
+        check(f"CGM sync успех → обобщение («{tt[:90]}»)", "pushed" in tt or "CGM" in tt, tt)
     check("бутонът за sync е пак активен", not page.is_disabled("#cgm-sync-btn"))
 
     page.goto(BASE + "/static/print-review.html", wait_until="networkidle"); page.wait_for_timeout(2500)
