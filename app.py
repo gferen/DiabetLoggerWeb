@@ -561,6 +561,43 @@ class DoseCalcPayload(BaseModel):
     xe: float = Field(..., ge=0, lt=30)
 
 
+# ---------- CALCULATOR FROM THE ACTIVE PUMP PROFILE (behind a flag) ----------
+# OFF by default: DIABET_CALC_FROM_PROFILE=1 turns it on, only after the owner
+# has reviewed the example doses. With the flag off — or when no profile is
+# active / the profile has no CR — calc_dose behaves exactly as before
+# (settings rules, DEFAULT_RULES as fallback).
+CALC_FROM_PROFILE = os.environ.get("DIABET_CALC_FROM_PROFILE", "0").strip() == "1"
+
+
+def _segment_value(segments, hhmm: str):
+    """Value of the time segment in force at local HH:MM ([{from:'HH:MM', value}])."""
+    segs = sorted((s for s in (segments or []) if s.get("from") is not None and s.get("value") is not None),
+                  key=lambda s: s["from"])
+    if not segs:
+        return None
+    cur = segs[-1]                       # before the first segment of the day → last one (wraps midnight)
+    for s in segs:
+        if s["from"] <= hhmm:
+            cur = s
+    return float(cur["value"])
+
+
+def _profile_for(now_local: datetime):
+    day = now_local.date().isoformat()
+    with db() as c:
+        row = c.execute(
+            "SELECT name, active_from, isf, cr FROM basal_profiles "
+            "WHERE active_from <= ? ORDER BY active_from DESC LIMIT 1", (day,)).fetchone()
+    if not row:
+        return None
+    return {"name": row["name"], "active_from": row["active_from"],
+            "isf": json.loads(row["isf"] or "[]"), "cr": json.loads(row["cr"] or "[]")}
+
+
+def _round_step(x: float, step: float = 0.05) -> float:
+    return round(round(x / step) * step, 2)
+
+
 @app.post("/api/calc-dose", dependencies=[Depends(check_auth)])
 def calc_dose(payload: DoseCalcPayload):
     """Compute recommended fast insulin dose based on current settings and inputs."""
@@ -594,6 +631,25 @@ def calc_dose(payload: DoseCalcPayload):
 
     meal_dose = xe * ic
     total = round(meal_dose + correction, 2)
+
+    # Active pump profile (flagged): CR g/U → U/XE, correction by ISF above the
+    # target ceiling. No reverse correction below target, no insulin-on-board —
+    # both are owner decisions (see report); the stacking warning below stays.
+    source = {"kind": "settings"}
+    if CALC_FROM_PROFILE:
+        now_local = datetime.now(timezone.utc).astimezone(get_local_tz())
+        prof = _profile_for(now_local)
+        hhmm = now_local.strftime("%H:%M")
+        cr = _segment_value(prof["cr"], hhmm) if prof else None
+        isf = _segment_value(prof["isf"], hhmm) if prof else None
+        if cr and cr > 0:
+            ic = round(float(s["xe_grams_carbs"]) / cr, 3)            # U per XE
+            meal_dose = xe * ic
+            target_hi = float(s["target_bg_high"])
+            correction = _round_step(max(0.0, (bg - target_hi) / isf)) if isf and isf > 0 else correction
+            total = _round_step(meal_dose + correction)
+            source = {"kind": "profile", "name": prof["name"], "active_from": prof["active_from"],
+                      "cr_g_per_u": cr, "isf": isf, "target_high": target_hi, "at": hhmm}
 
     warnings = []
     if bg >= s["ketones_check_threshold"]:
@@ -635,6 +691,7 @@ def calc_dose(payload: DoseCalcPayload):
         "recommended_units": total,
         "breakdown": f"{xe} XE × {ic} U/XE + {correction} корекция = {total} U",
         "breakdown_params": {"xe": xe, "ic": ic, "corr": correction, "total": total},
+        "source": source,
         "warnings": warnings,
     }
 

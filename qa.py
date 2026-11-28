@@ -1191,6 +1191,42 @@ check("отчет notes: fast носи meal_time", n_['за 3 XE']['meal_time'].
 c_a1.delete('/api/entries', headers=HA1)
 
 
+# ========== 23. Калкулатор от активния профил (флаг, по подразбиране ИЗКЛ.) ==========
+section("23. calc от профил: флаг изкл. = старо поведение; вкл. = CR/ISF от профила")
+c_a1.delete('/api/entries', headers=HA1)
+check("флагът е изключен по подразбиране", app_a1.CALC_FROM_PROFILE is False)
+seg = app_a1._segment_value
+S4 = [{'from':'00:00','value':4},{'from':'08:00','value':3},{'from':'11:00','value':3.5},{'from':'21:00','value':3.5}]
+check("ISF 07:59 → 4, 08:00 → 3, 10:59 → 3, 11:00 → 3.5, 23:30 → 3.5",
+      [seg(S4,'07:59'), seg(S4,'08:00'), seg(S4,'10:59'), seg(S4,'11:00'), seg(S4,'23:30')] == [4,3,3,3.5,3.5])
+check("сегменти от 06:00 → 05:00 взима последния (през полунощ)", seg([{'from':'06:00','value':2},{'from':'20:00','value':5}], '05:00') == 5)
+check("празни сегменти → None", seg([], '10:00') is None)
+r = c_a1.post('/api/profiles', json={'name':'QA const', 'active_from':'2020-01-01', 'basal':[0.5]*24,
+              'isf':[{'from':'00:00','value':3}], 'cr':[{'from':'00:00','value':12}], 'notes':''}, headers=HA1)
+check("профил CR 12 g/U, ISF 3 → създаден", r.status_code == 200, r.text[:150])
+d = dose(7.0, 3)
+check("флаг ИЗКЛ. → старото: 7.0/3 XE = 9 U, източник settings", d['recommended_units'] == 9 and d['source']['kind'] == 'settings', d)
+app_a1.CALC_FROM_PROFILE = True
+try:
+    d = dose(7.0, 3)
+    check("флаг ВКЛ.: 3 XE при CR 12 → 3 U/храна (1 U/XE)", d['ic_ratio'] == 1.0 and d['meal_units'] == 3.0, d)
+    check("флаг ВКЛ.: корекция (7−6)/3 = 0.35 (стъпка 0.05)", d['correction_units'] == 0.35 and d['recommended_units'] == 3.35, d)
+    check("флаг ВКЛ.: източник = профил", d['source']['kind'] == 'profile' and d['source']['cr_g_per_u'] == 12 and d['source']['isf'] == 3, d['source'])
+    d = dose(5.5, 2); check("под целта (5.5 ≤ 6.0) → без корекция, 2 U", d['correction_units'] == 0 and d['recommended_units'] == 2.0, d)
+    d = dose(16.0, 0); check("16.0 / 0 XE → (16−6)/3 = 3.35 U", d['recommended_units'] == 3.35, d)
+    d = dose(3.5, 3); check("хипо блокът остава", d['blocked'] is True, d)
+    d = dose(16.0, 2); check("кетонното предупреждение остава", any(w.get('code') == 'ketones_check' for w in d['warnings']), d)
+finally:
+    app_a1.CALC_FROM_PROFILE = False
+for p_ in c_a1.get('/api/profiles', headers=HA1).json():
+    c_a1.delete(f"/api/profiles/{p_['id']}", headers=HA1)
+app_a1.CALC_FROM_PROFILE = True
+try:
+    d = dose(7.0, 3); check("флаг ВКЛ., но няма профил → fallback към settings (9 U)", d['recommended_units'] == 9 and d['source']['kind'] == 'settings', d)
+finally:
+    app_a1.CALC_FROM_PROFILE = False
+
+
 # ========== FINAL REPORT ==========
 print("\n" + "="*60)
 print(f"РЕЗУЛТАТ: {PASSED} passed, {FAILED} failed")
