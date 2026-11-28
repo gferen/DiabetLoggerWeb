@@ -91,6 +91,14 @@ print(f"seeded {seed()} entries")
 fails = 0
 with sync_playwright() as pw:
     br = pw.chromium.launch()
+    # self-test: the scanner must catch an injected untranslated string and a raw key
+    ctx = br.new_context(); ctx.add_init_script(f"localStorage.setItem('diabet_lang','en'); localStorage.setItem('diabet_api_key','{KEY}');")
+    page = ctx.new_page(); page.goto(BASE + "/static/report.html", wait_until="networkidle"); page.wait_for_timeout(1500)
+    page.evaluate("document.body.insertAdjacentHTML('beforeend', '<div>Непреведен текст</div><div>report_missing_key</div>')")
+    c, k = problems(visible_texts(page))
+    assert any("Непреведен" in x for x in c) and "report_missing_key" in k, ("SELF-TEST FAILED", c, k)
+    print(f"  self-test OK (scanner sees {len(visible_texts(page))} text nodes on en/report)")
+    ctx.close()
     for lang in LANGS:
         ctx = br.new_context()
         ctx.add_init_script(f"localStorage.setItem('diabet_lang','{lang}'); localStorage.setItem('diabet_api_key','{KEY}');")
@@ -108,7 +116,7 @@ with sync_playwright() as pw:
                 _, keys = problems(texts)
             bad = len(set(cyr)) + len(set(keys))
             fails += bad
-            row.append(f"{name}:{'OK' if not bad else bad}")
+            row.append(f"{name}:{'OK' if not bad else bad}({len(set(texts))})")
             for c in sorted(set(cyr))[:8]: print(f"    {lang} {name} CYR: {c[:90]}")
             for k in sorted(set(keys))[:8]: print(f"    {lang} {name} KEY: {k}")
         if errs: fails += len(errs); print(f"    {lang} JS errors: {errs[:3]}")
