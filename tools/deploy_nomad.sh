@@ -47,3 +47,7 @@ else
 fi
 ssh -o BatchMode=yes $HOST "echo $REV > $DIR/.deployed-rev; sleep 4; curl -s localhost:$PORT/api/health; echo; docker exec $CT md5sum /app/app.py /app/static/index.html" 
 echo "local: $(git show HEAD:app.py | md5sum | cut -c1-32)  app.py | $(git show HEAD:static/index.html | md5sum | cut -c1-32)  index.html"
+if [ "$TARGET" = live ]; then
+  echo "== rotate backups (keep pre-p0 + newest 3; DB snapshots: 7-day buffer)"
+  ssh -o BatchMode=yes $HOST "DEPLOY_LIVE_DIR=$DIR bash -s" < "$(dirname "$0")/rotate_backups.sh" -- --apply --keep 3 | grep -E "DO|buffered:" || true
+fi
