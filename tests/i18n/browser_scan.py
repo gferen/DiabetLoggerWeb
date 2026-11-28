@@ -148,6 +148,15 @@ with sync_playwright() as pw:
         ok = page.evaluate("typeof t === 'function' && t('nav_chart') !== 'nav_chart'")
         print(f"  file:// demo (bg.js fallback): {'OK' if ok and not errs else 'FAIL'} {errs[:2]}")
         fails += 0 if ok and not errs else 1
+        # demo sample notes are translated too (only the persisted [ХИПО]/[ЦИГАРА] markers stay Bulgarian)
+        ctx2 = br.new_context(); ctx2.add_init_script("localStorage.setItem('diabet_lang','en')")
+        p2 = ctx2.new_page(); p2.goto(pathlib.Path(STATIC, "index.html").resolve().as_uri(), wait_until="load"); p2.wait_for_timeout(3000)
+        p2.evaluate("currentRange = 7; reload()"); p2.wait_for_timeout(2000)
+        cyr = sorted({x for x in visible_texts(p2) if CYR.search(x) and not ALLOW.search(x)})
+        raw = p2.evaluate("document.body.innerText.includes('@@demo_n_')")
+        en_ok = "breakfast" in p2.evaluate("document.body.innerText")
+        print(f"  file:// demo notes in en: {'OK' if en_ok and not cyr and not raw else 'FAIL'} {cyr[:5]} raw={raw}")
+        fails += 0 if en_ok and not cyr and not raw else 1
     br.close()
 print(f"\nI18N RUNTIME: {'PASS' if not fails else f'{fails} problems'}")
 sys.exit(1 if fails else 0)
