@@ -729,15 +729,26 @@ def cgm_sync():
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="juggluco_pull.py not found next to app.py")
 
-    ok = result.returncode == 0
-    # surface the last informative line (pushed X/Y entries...) for the UI toast
-    lines = [l for l in result.stdout.strip().splitlines() if l.strip()]
-    summary = lines[-1] if lines else (result.stderr.strip().splitlines()[-1] if result.stderr.strip() else "no output")
+    out_lines = [l for l in result.stdout.strip().splitlines() if l.strip()]
+    err_lines = [l for l in result.stderr.strip().splitlines() if l.strip()]
 
-    if not ok:
-        raise HTTPException(status_code=502, detail=f"CGM sync failed: {summary}")
+    if result.returncode != 0:
+        # On failure the useful line is the last [error] on stderr — the last
+        # stdout line is just "[info] requesting ..." and misleads the user.
+        reason = next((l for l in reversed(err_lines) if "[error]" in l), err_lines[-1] if err_lines else "no output")
+        reason = reason.replace("[error]", "").strip()
+        if result.returncode == 2 or "missing config" in reason:
+            msg = f"CGM sync is not configured on the server ({reason})"
+        elif "failed to fetch from Juggluco" in reason:
+            msg = f"Phone (Juggluco) not reachable — check WireGuard / that Juggluco runs. {reason}"
+        else:
+            msg = f"CGM sync failed: {reason}"
+        print(f"[cgm-sync] exit={result.returncode} {msg}", flush=True)
+        raise HTTPException(status_code=502, detail=msg)
 
-    return {"ok": True, "summary": summary, "stdout": result.stdout[-4000:]}
+    # Success: surface the last informative line (pushed X/Y entries...) for the toast.
+    summary = out_lines[-1] if out_lines else "no output"
+    return {"ok": True, "summary": summary, "warnings": err_lines[-5:], "stdout": result.stdout[-4000:]}
 
 
 def _entry_times(entry: EntryIn, where: str = ""):

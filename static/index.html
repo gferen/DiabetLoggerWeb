@@ -1236,10 +1236,7 @@ async function api(path, opts = {}) {
   if (tok) headers['Authorization'] = 'Bearer ' + tok;
   const res = await fetch(API + path, { ...opts, headers });
   if (res.status === 401) {
-    if (authMode === 'login') {
-      clearToken();
-      showLogin();
-    }
+    onUnauthorized();             // clears stale creds, banner "NOT saved", login/key prompt
     throw new Error('Unauthorized');
   }
   if (!res.ok) {
@@ -1283,6 +1280,7 @@ async function doLogin() {
     if (!res.ok) throw new Error((await res.json()).detail || t('error_generic'));
     const data = await res.json();
     setToken(data.token);
+    hideAuthBanner();
     document.getElementById('login-pass').value = '';
     hideLogin();
     reload();
@@ -1292,6 +1290,7 @@ async function doLogin() {
 }
 function logout() {
   clearToken();
+  try { localStorage.removeItem('diabet_api_key'); } catch (_) {}   // logout clears every stored credential
   showLogin();
 }
 
@@ -1392,7 +1391,8 @@ function toast(msg, isError = false) {
   t.textContent = msg;
   t.classList.toggle('error', isError);
   t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => t.classList.remove('show'), isError ? 6000 : 2200);   // errors must be readable
 }
 
 // ============= DISPLAY HELPERS =============

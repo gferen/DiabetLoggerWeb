@@ -148,3 +148,59 @@ function bgMgdlGuard(v) {
   const mmol = Math.round(v / 18 * 10) / 10;
   return confirm(t('confirm_bg_mgdl', { v, mmol })) ? mmol : null;
 }
+
+// ---------- shared: 401 handling (P1/B1) ----------
+// Any 401 means every credential we sent was rejected (the server tries the
+// API key first, then the JWT). So: drop BOTH stored credentials, tell the user
+// plainly that the last action was NOT saved, and offer the right way back in —
+// the login form in login mode, the key prompt in api-key mode. Never silent.
+async function onUnauthorized() {
+  try { localStorage.removeItem('diabet_token'); localStorage.removeItem('diabet_api_key'); } catch (_) {}
+  let mode = 'login';
+  try {
+    const h = await (await fetch('/api/health')).json();
+    mode = h.auth.login ? 'login' : (h.auth.api_key ? 'apikey' : 'open');
+  } catch (_) { /* offline: assume login */ }
+  showAuthBanner(mode);
+  if (mode === 'login' && typeof showLogin === 'function') showLogin();
+}
+
+function showAuthBanner(mode) {
+  let b = document.getElementById('auth-banner');
+  if (!b) {
+    b = document.createElement('div');
+    b.id = 'auth-banner';
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;background:#b3261e;color:#fff;' +
+      'padding:10px 14px;font:14px/1.4 system-ui,sans-serif;display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+    document.body.prepend(b);
+  }
+  b.innerHTML = '';
+  const msg = document.createElement('span');
+  msg.style.flex = '1';
+  msg.textContent = t(mode === 'apikey' ? 'auth_bad_key' : 'auth_expired');
+  b.appendChild(msg);
+  const btn = document.createElement('button');
+  btn.style.cssText = 'background:#fff;color:#b3261e;border:0;border-radius:6px;padding:6px 12px;font-weight:600;cursor:pointer';
+  if (mode === 'apikey') {
+    btn.textContent = t('auth_enter_key');
+    btn.onclick = () => {
+      const k = prompt(t('prompt_api_key'), '');
+      if (k === null || !k.trim()) return;
+      try { localStorage.setItem('diabet_api_key', k.trim()); } catch (_) {}
+      location.reload();
+    };
+  } else if (typeof showLogin === 'function') {
+    btn.textContent = t('login');
+    btn.onclick = () => showLogin();
+  } else {
+    btn.textContent = t('login');               // page without a login form (profiles, cgm_view)
+    btn.onclick = () => { location.href = '/'; };
+  }
+  b.appendChild(btn);
+}
+
+function hideAuthBanner() {
+  const b = document.getElementById('auth-banner');
+  if (b) b.remove();
+}

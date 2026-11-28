@@ -136,7 +136,6 @@ const API_BASE = window.location.origin;
 // No secrets in this file. Credentials live only in this browser's localStorage,
 // under the same keys the other pages use ('diabet_api_key', 'diabet_token').
 let authFailed = false;   // set after a 401 so the 60 s refresh stops until the user fixes the key
-let promptedOnce = false; // ask for the key automatically only once per page load
 
 let statusFn = null;   // keeps the status line re-renderable when the language changes
 function setStatusText(fn) { statusFn = fn; document.getElementById('status').textContent = fn(); }
@@ -201,11 +200,8 @@ async function loadData() {
       headers: authHeaders()
     });
     if (res.status === 401) {
-      authFailed = true;
-      if (!promptedOnce) {
-        promptedOnce = true;
-        if (askApiKey()) { authFailed = false; return loadData(); }
-      }
+      authFailed = true;            // stop the 60 s auto-refresh until the user is back in
+      onUnauthorized();             // login mode → link to login; api-key mode → key prompt
       throw new Error(t('err_api_key_required'));
     }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

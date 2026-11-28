@@ -169,6 +169,10 @@ async function checkAuth() {
   authMode = h.auth.login ? 'login' : h.auth.api_key ? 'apikey' : 'open';
 }
 
+// A setting that does not exist is shown as "—", never as `undefined` and never
+// replaced by an invented clinical default.
+function dash(v) { return (v === undefined || v === null || v === '' || Number.isNaN(v)) ? '—' : v; }
+
 async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers||{}) };
   const key = getApiKey();
@@ -177,7 +181,7 @@ async function api(path, opts = {}) {
   if (tok) headers['Authorization'] = 'Bearer ' + tok;
   const res = await fetch(API + path, { ...opts, headers });
   if (res.status === 401) {
-    if (authMode === 'login') { clearToken(); showLogin(); }
+    onUnauthorized();             // clears stale creds, banner "NOT saved", login/key prompt
     throw new Error('Unauthorized');
   }
   if (!res.ok) { const err = new Error(apiErrorText(res.status, await res.text())); err.status = res.status; throw err; }
@@ -206,6 +210,7 @@ async function doLogin() {
     if (!res.ok) throw new Error();
     const d = await res.json();
     setToken(d.token);
+    hideAuthBanner();
     document.getElementById('login-pass').value = '';
     hideLogin();
     loadData();
@@ -306,10 +311,10 @@ function render(entries, settings, report, from, to) {
   parts.push(`
     <div class="schema">
       <strong>${t('print_schema_current')}</strong>
-      I:C = <strong>${settings.ic_ratio_normal} U/XE</strong> (1 XE = ${settings.xe_grams_carbs}g) ·
-      ${t('print_schema_target', { dlo: settings.target_bg_low, dhi: settings.target_bg_high, nlo: settings.target_bg_night_low, nhi: settings.target_bg_night_high })} ·
-      ${t('print_schema_hypo', { v: settings.hypo_threshold })} ·
-      ${t('print_schema_evening', { dose: settings.evening_slow_dose, step: settings.evening_dose_step })}
+      I:C = <strong>${dash(settings.ic_ratio_normal)} U/XE</strong> (1 XE = ${dash(settings.xe_grams_carbs)}g) ·
+      ${t('print_schema_target', { dlo: dash(settings.target_bg_low), dhi: dash(settings.target_bg_high), nlo: dash(settings.target_bg_night_low), nhi: dash(settings.target_bg_night_high) })} ·
+      ${t('print_schema_hypo', { v: dash(settings.hypo_threshold) })} ·
+      ${t('print_schema_evening', { dose: dash(settings.evening_slow_dose), step: dash(settings.evening_dose_step) })}
       <table style="display: inline-table; margin-left: 20px; vertical-align: middle;">
         <thead><tr><th>BG (mmol/L)</th><th>${t('print_correction')}</th></tr></thead>
         <tbody>${corrRows}</tbody>

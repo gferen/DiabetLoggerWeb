@@ -197,7 +197,7 @@ async function api(path, opts = {}) {
   if (tok) headers['Authorization'] = 'Bearer ' + tok;
   const res = await fetch(API + path, { ...opts, headers });
   if (res.status === 401) {
-    if (authMode === 'login') { clearToken(); showLogin(); }
+    onUnauthorized();             // clears stale creds, banner "NOT saved", login/key prompt
     throw new Error('Unauthorized');
   }
   if (!res.ok) { const err = new Error(apiErrorText(res.status, await res.text())); err.status = res.status; throw err; }
@@ -226,6 +226,7 @@ async function doLogin() {
     if (!res.ok) throw new Error();
     const d = await res.json();
     setToken(d.token);
+    hideAuthBanner();
     document.getElementById('login-pass').value = '';
     hideLogin();
     loadReport();

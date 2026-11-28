@@ -1031,6 +1031,25 @@ r = c_a1.get('/api/health')
 check("/api/health → без no-cache", r.headers.get('cache-control') != 'no-cache')
 
 
+# ========== 17. C1: CGM SYNC ГРЕШКИ ==========
+section("17. C1 — CGM sync: ясно съобщение, без тих провал, без секрет")
+for k in ('JUGGLUCO_HOST', 'JUGGLUCO_API_SECRET'):
+    os.environ.pop(k, None)
+r = c_a1.post('/api/cgm-sync', headers=HA1)
+check("cgm-sync без конфиг → 502", r.status_code == 502, r.status_code)
+check("cgm-sync без конфиг → 'not configured'", 'not configured' in r.json().get('detail', ''), r.text[:200])
+os.environ['JUGGLUCO_HOST'] = '127.0.0.1'; os.environ['JUGGLUCO_PORT'] = '9'   # discard port: nothing listens
+os.environ['JUGGLUCO_API_SECRET'] = 'secret-probe-xyz'; os.environ['DIABET_API_KEY'] = os.environ.get('DIABET_API_KEY') or 'k'
+r = c_a1.post('/api/cgm-sync', headers=HA1)
+d = r.json().get('detail', '')
+check("cgm-sync недостъпен телефон → 502", r.status_code == 502, r.status_code)
+check("cgm-sync недостъпен телефон → 'not reachable'", 'not reachable' in d, d)
+check("cgm-sync грешка → без '[info] requesting'", '[info]' not in d, d)
+check("cgm-sync грешка → секретът не изтича", 'secret-probe-xyz' not in r.text, d)
+for k in ('JUGGLUCO_HOST', 'JUGGLUCO_PORT', 'JUGGLUCO_API_SECRET'):
+    os.environ.pop(k, None)
+
+
 # ========== FINAL REPORT ==========
 print("\n" + "="*60)
 print(f"РЕЗУЛТАТ: {PASSED} passed, {FAILED} failed")
