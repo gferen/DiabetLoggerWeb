@@ -216,6 +216,19 @@ def migrate_db():
             c.execute("CREATE INDEX IF NOT EXISTS idx_entries_time ON entries(time)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_entries_type ON entries(type)")
 
+        # Structured-data phase: nullable columns for meal timing, carb grams,
+        # and per-type extra fields (JSON). SQLite has no "ADD COLUMN IF NOT
+        # EXISTS", so guard each with a duplicate-column check.
+        existing_cols = {row["name"] for row in c.execute("PRAGMA table_info(entries)")}
+        for col_name, col_type in (
+            ("meal_time", "TEXT"),
+            ("carbs_g", "REAL"),
+            ("meta", "TEXT"),
+        ):
+            if col_name not in existing_cols:
+                c.execute(f"ALTER TABLE entries ADD COLUMN {col_name} {col_type}")
+
+        # (Must run AFTER the meta column exists — the key uses it.)
         # Dedup guard. A row is a duplicate only if type, time, value AND meta
         # (source etc.) are all identical — a CGM/meter re-push or a double tap.
         # A DIFFERENT value in the same minute is a real, separate reading and
@@ -240,18 +253,6 @@ def migrate_db():
                 f"[warn] UNIQUE dedup index NOT created — {groups} duplicate "
                 f"group(s) in DB. Run 'python3 dedupe.py --apply', then restart."
             )
-
-        # Structured-data phase: nullable columns for meal timing, carb grams,
-        # and per-type extra fields (JSON). SQLite has no "ADD COLUMN IF NOT
-        # EXISTS", so guard each with a duplicate-column check.
-        existing_cols = {row["name"] for row in c.execute("PRAGMA table_info(entries)")}
-        for col_name, col_type in (
-            ("meal_time", "TEXT"),
-            ("carbs_g", "REAL"),
-            ("meta", "TEXT"),
-        ):
-            if col_name not in existing_cols:
-                c.execute(f"ALTER TABLE entries ADD COLUMN {col_name} {col_type}")
 
 
 migrate_db()
