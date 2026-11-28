@@ -134,6 +134,23 @@
         </div>
       </div>
     </div>
+    <div class="row">
+      <div>
+        <label data-i18n="carbs_g">Въглехидрати в грамове, по желание</label>
+        <input type="number" id="m-carbs" step="1" min="1" max="500" placeholder="напр. 36" data-i18n-placeholder="meal_ph_carbs">
+      </div>
+      <div>
+        <label style="display:flex;gap:6px;align-items:center;margin-top:18px">
+          <input type="checkbox" id="m-mealtime-chk" onchange="toggleMealTime()"> <span data-i18n="meal_separate_time">Отделно начало на хранене</span>
+        </label>
+        <div class="dt-picker" id="mm-picker" style="display:none;margin-top:6px">
+          <input type="date" id="mm-date">
+          <input type="number" id="mm-hour" min="0" max="23" class="dt-num" placeholder="ч" data-i18n-placeholder="meal_ph_hour">
+          <span class="dt-sep">:</span>
+          <input type="number" id="mm-min" min="0" max="59" class="dt-num" placeholder="м" data-i18n-placeholder="meal_ph_min">
+        </div>
+      </div>
+    </div>
     <div>
       <label data-i18n="meal_food_desc">Описание на храната</label>
       <input type="text" id="m-food" placeholder="напр. 2 филии хляб + сирене, чай" data-i18n-placeholder="meal_ph_food">
@@ -433,6 +450,16 @@ function readValidNumber(id, { isBg = false, recalc = null, allowZero = false } 
   return v;
 }
 
+// Optional separate meal start (like the "fast insulin" form on the main page):
+// the dose time stays in the main picker, the meal start goes to meal_time.
+function toggleMealTime() {
+  const on = document.getElementById('m-mealtime-chk').checked;
+  document.getElementById('mm-picker').style.display = on ? 'flex' : 'none';
+  if (on) ['date', 'hour', 'min'].forEach(k => {
+    document.getElementById('mm-' + k).value = document.getElementById('m-' + k).value;
+  });
+}
+
 async function saveMeal() {
   if (!calcData) return;
   const dt = readDatetime('m');
@@ -443,6 +470,20 @@ async function saveMeal() {
   if (bg === null) return;
   const xe = readValidNumber('m-xe', { allowZero: true });   // 0 XE = correction bolus
   if (xe === null) return;
+  // carbs in grams: optional, kept next to XE (the owner tracks both)
+  const carbsEl = document.getElementById('m-carbs');
+  let carbs = null;
+  if (carbsEl.value.trim() !== '') {
+    carbs = readValidNumber('m-carbs');
+    if (carbs === null) return;
+    if (!(xe > 0)) { toast(t('meal_carbs_need_xe'), 'error'); carbsEl.focus(); return; }
+  }
+  let mealTimeIso = null;
+  if (document.getElementById('m-mealtime-chk').checked) {
+    const mdt = readDatetime('mm');
+    if (!mdt) { toast(t('meal_invalid_datetime'), 'error'); return; }
+    mealTimeIso = mdt.toISOString();
+  }
   const food = document.getElementById('m-food').value.trim();
   const useOverride = document.getElementById('m-override-chk').checked;
   const overrideVal = parseFloat(document.getElementById('m-override').value);
@@ -462,11 +503,16 @@ async function saveMeal() {
     const entries = [
       { type:'bg', value:bg, time:iso, notes: food ? `преди: ${food}` : (xe > 0 ? 'преди хранене' : 'корекция') },
     ];
-    if (xe > 0) entries.push({ type:'meal', value:xe, time:iso, notes: food });
+    if (xe > 0) {
+      const meal = { type:'meal', value:xe, time:iso, notes: food };
+      if (carbs !== null) meal.carbs_g = carbs;
+      if (mealTimeIso) meal.meal_time = mealTimeIso;
+      entries.push(meal);
+    }
     if (insulin !== null && insulin > 0) {
       const what = xe > 0 ? `${xe} XE` : 'корекция';
       const insulinNotes = useOverride ? `override за ${what}` : `за ${what} (авто-калк)`;
-      entries.push({ type:'fast', value:insulin, time:iso, notes: insulinNotes });
+      entries.push({ type:'fast', value:insulin, time:iso, notes: insulinNotes, ...(mealTimeIso ? { meal_time: mealTimeIso } : {}) });
     }
     await api('/entries/batch', { method: 'POST', body: JSON.stringify({ entries }) });
 
@@ -474,6 +520,9 @@ async function saveMeal() {
     document.getElementById('m-bg').value = '';
     document.getElementById('m-xe').value = '';
     document.getElementById('m-food').value = '';
+    document.getElementById('m-carbs').value = '';
+    document.getElementById('m-mealtime-chk').checked = false;
+    document.getElementById('mm-picker').style.display = 'none';
     document.getElementById('m-override-chk').checked = false;
     document.getElementById('m-override').value = '';
     document.getElementById('m-override-input-wrap').style.display = 'none';

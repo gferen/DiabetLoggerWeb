@@ -1039,7 +1039,7 @@ def report(
 
     with db() as c:
         rows = c.execute(
-            "SELECT id, type, value, time, notes, meta FROM entries "
+            "SELECT id, type, value, time, notes, meta, carbs_g, meal_time FROM entries "
             "WHERE time >= ? AND time <= ? ORDER BY time",
             (from_iso, to_iso),
         ).fetchall()
@@ -1149,7 +1149,8 @@ def report(
 
     # ---- Notes list (entries with non-empty notes) ----
     notes_list = [
-        {"time": r["time"], "type": r["type"], "value": r["value"], "notes": r["notes"]}
+        {"time": r["time"], "type": r["type"], "value": r["value"], "notes": r["notes"],
+         "carbs_g": r["carbs_g"], "meal_time": r["meal_time"]}
         for r in rows if r["notes"] and r["notes"].strip()
     ]
 
@@ -1235,8 +1236,12 @@ def report(
             "xe_per_active_day": round(xe_total / meal_days, 1) if meal_days else 0,
             "active_days": meal_days,
             "actual_ic_ratio": actual_ic,  # empirical: fast_total / xe_total
+            # grams are optional per meal (older rows keep them only in the note)
+            "carbs_total_g": round(sum(r["carbs_g"] for r in meals if r["carbs_g"]), 1),
+            "carbs_entries": sum(1 for r in meals if r["carbs_g"]),
             "entries": [
-                {"time": r["time"], "value": r["value"], "notes": r["notes"]}
+                {"time": r["time"], "value": r["value"], "notes": r["notes"],
+                 "carbs_g": r["carbs_g"], "meal_time": r["meal_time"]}
                 for r in meals
             ],
         },

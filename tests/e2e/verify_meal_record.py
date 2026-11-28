@@ -1,4 +1,4 @@
-"""READ-ONLY verification of a meal record end-to-end (cleanup task #1). TEST INSTANCE ONLY.
+"""Verification of a meal record end-to-end (cleanup task #1). TEST INSTANCE ONLY.
 Flow A: meal.html — BG + XE + food + OVERRIDE dose.   Flow B: index fast form — dose + carbs_g + separate meal_time.
 Checks the DB rows, then where each field shows up: history (index), doctor report, CSV export.
 Creates entries "now" on the test DB and deletes them at the end.
@@ -37,6 +37,9 @@ with sync_playwright() as pw:
     pg.goto(BASE + "/static/meal.html", wait_until="networkidle"); pg.wait_for_timeout(800)
     pg.evaluate("(() => { const d=new Date(Date.now()-40*60000); document.getElementById('m-hour').value=d.getHours(); document.getElementById('m-min').value=d.getMinutes(); })()")
     pg.fill("#m-bg", "7.2"); pg.fill("#m-xe", "3"); pg.fill("#m-food", FOOD); pg.dispatch_event("#m-xe", "input"); pg.wait_for_timeout(1500)
+    pg.fill("#m-carbs", "36")
+    pg.check("#m-mealtime-chk")
+    pg.evaluate("(() => { const d=new Date(Date.now()-55*60000); document.getElementById('mm-hour').value=d.getHours(); document.getElementById('mm-min').value=d.getMinutes(); })()")
     recommended = pg.evaluate("calcData && calcData.recommended_units")
     pg.check("#m-override-chk"); pg.fill("#m-override", "4.5"); pg.dispatch_event("#m-override", "input")
     pg.click("#m-save-btn"); pg.wait_for_timeout(2000)
@@ -80,14 +83,15 @@ with sync_playwright() as pw:
     row("A доза = override (4.5), не препоръката", yes(fa and fa["value"] == 4.5), yes("4.5 U" in hist), yes("4.5" in rep), yes(in_csv(lambda r: r["type"] == "FAST" and r["value"] == "4.5")))
     row("A храна (notes)", yes(ma and ma["notes"] == FOOD), yes(FOOD in hist), yes(FOOD in rep), yes(in_csv(lambda r: r["notes"] == FOOD)))
     row("A XE (meal.value)", yes(ma and ma["value"] == 3), yes("3 XE" in hist), yes(FOOD in rep or "XE" in rep), yes(in_csv(lambda r: r["type"] == "MEAL" and r["value"] == "3")))
-    row("A carbs_g", "✗ не се праща" if ma and ma["carbs_g"] is None else "✓", "—", "—", "—")
-    row("A meal_time ≠ time", "✗ не се праща (едно време за всичко)" if fa and fa["meal_time"] is None else "✓", "—", "—", "—")
-    row("B доза (fast.value)", yes(b and b["value"] == 3.5), yes("3.5 U" in hist), yes("3.5" in rep), yes(in_csv(lambda r: r["type"] == "FAST" and r["value"] == "3.5")))
     rep_src = urllib.request.urlopen(BASE + "/static/report.html").read().decode()
-    rep_has = lambda f: f in rep_src     # report.html never references the field → not shown
     hm = lambda iso: datetime.fromisoformat(iso).astimezone().strftime("%H:%M")
-    row("B carbs_g = 45", yes(b and b["carbs_g"] == 45), yes("45 g" in hist or "45g" in hist), yes(rep_has("carbs_g")), yes(in_csv(lambda r: r["carbs_g"] == "45")))
-    row("B meal_time ≠ time", yes(b and b["meal_time"] and b["meal_time"] < b["time"]), yes(b and b["meal_time"] and hm(b["meal_time"]) in hist), yes(rep_has("meal_time")), yes(in_csv(lambda r: r["meal_time"] and r["meal_time"] != r["time_utc"])))
+    row("A carbs_g = 36 (ред хранене)", yes(ma and ma["carbs_g"] == 36), yes("36 g" in hist), yes("36 g" in rep), yes(in_csv(lambda r: r["type"] == "MEAL" and r["carbs_g"] == "36")))
+    row("A meal_time ≠ time (хранене + доза)", yes(ma and fa and ma["meal_time"] and fa["meal_time"] == ma["meal_time"] and ma["meal_time"] < ma["time"]),
+        yes(ma and ma["meal_time"] and hm(ma["meal_time"]) in hist), yes(ma and ma["meal_time"] and hm(ma["meal_time"]) in rep), yes(in_csv(lambda r: r["type"] == "MEAL" and r["meal_time"] and r["meal_time"] != r["time_utc"])))
+    row("A КЗ ред без carbs/meal_time (не се дублира)", yes(ba and ba["carbs_g"] is None and ba["meal_time"] is None), "—", "—", "—")
+    row("B доза (fast.value)", yes(b and b["value"] == 3.5), yes("3.5 U" in hist), yes("3.5" in rep), yes(in_csv(lambda r: r["type"] == "FAST" and r["value"] == "3.5")))
+    row("B carbs_g = 45", yes(b and b["carbs_g"] == 45), yes("45 g" in hist), yes("45 g" in rep), yes(in_csv(lambda r: r["carbs_g"] == "45")))
+    row("B meal_time ≠ time", yes(b and b["meal_time"] and b["meal_time"] < b["time"]), yes(b and b["meal_time"] and hm(b["meal_time"]) in hist), yes(b and b["meal_time"] and hm(b["meal_time"]) in rep), yes(in_csv(lambda r: r["meal_time"] and r["meal_time"] != r["time_utc"])))
     row("B бележка", yes(b and b["notes"] == FOOD + "-B"), yes(FOOD + "-B" in hist), yes(FOOD + "-B" in rep), yes(in_csv(lambda r: r["notes"] == FOOD + "-B")))
 
     for r in [*a.values(), b]:

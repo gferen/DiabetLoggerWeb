@@ -1171,6 +1171,26 @@ r = c_a1.delete('/api/day-profiles/2026-03-01', headers=HA1)
 check("day-profile DELETE втори път → 404", r.status_code == 404)
 
 
+# ========== 22. carbs_g / meal_time в отчета ==========
+section("22. carbs_g и meal_time стигат до отчета; стари редове без тях не гърмят")
+c_a1.delete('/api/entries', headers=HA1)
+D2 = '2026-04-02'
+r = c_a1.post('/api/entries/batch', json={'entries': [
+    {'type':'bg','value':7.2,'time':f'{D2}T12:15:00+00:00','notes':'преди: овес'},
+    {'type':'meal','value':3,'time':f'{D2}T12:15:00+00:00','notes':'овес','carbs_g':36,'meal_time':f'{D2}T12:00:00+00:00'},
+    {'type':'fast','value':3,'time':f'{D2}T12:15:00+00:00','notes':'за 3 XE','meal_time':f'{D2}T12:00:00+00:00'}]}, headers=HA1)
+check("batch с carbs_g + meal_time → 200", r.status_code == 200, r.text[:200])
+c_a1.post('/api/entries', json={'type':'meal','value':2,'time':f'{D2}T18:00:00+00:00','notes':'стар запис ~24g carbs'}, headers=HA1)  # old style
+rep = c_a1.get(f'/api/report?from={D2}&to={D2}', headers=HA1).json()
+m = {e['notes']: e for e in rep['meals']['entries']}
+check("отчет: хранене с carbs_g 36 и meal_time", m['овес']['carbs_g'] == 36 and m['овес']['meal_time'].startswith(f'{D2}T12:00'), m.get('овес'))
+check("отчет: стар запис → carbs_g/meal_time = None", m['стар запис ~24g carbs']['carbs_g'] is None and m['стар запис ~24g carbs']['meal_time'] is None)
+check("отчет: carbs_total_g = 36 от 1 хранене", rep['meals']['carbs_total_g'] == 36 and rep['meals']['carbs_entries'] == 1, rep['meals'])
+n_ = {e['notes']: e for e in rep['notes']}
+check("отчет notes: fast носи meal_time", n_['за 3 XE']['meal_time'].startswith(f'{D2}T12:00'), n_.get('за 3 XE'))
+c_a1.delete('/api/entries', headers=HA1)
+
+
 # ========== FINAL REPORT ==========
 print("\n" + "="*60)
 print(f"РЕЗУЛТАТ: {PASSED} passed, {FAILED} failed")

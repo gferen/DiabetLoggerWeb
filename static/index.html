@@ -2246,6 +2246,9 @@ function renderHistory() {
       cls = 'device-change';
     }
     else { type = esc(e.type); value = `${e.value}`; cls = ''; }
+    // carbs in grams and a separate meal start, only when they exist (old rows: nothing shown)
+    if (e.carbs_g != null && e.carbs_g > 0) value += ` · ${Math.round(e.carbs_g * 10) / 10} g`;
+    if (e.meal_time && e.meal_time !== e.time) value += ` · 🍽 ${fmtClock(e.meal_time)}`;
     const notesEsc = notes.replace(/"/g, '&quot;').replace(/</g, '&lt;');
     const notesDisplay = notes
       ? `<span class="notes-text">${notesEsc}</span>`

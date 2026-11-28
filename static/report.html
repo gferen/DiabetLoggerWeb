@@ -518,7 +518,7 @@ function render(d) {
           <div class="metric">
             <div class="label">${t('report_xe_total')}</div>
             <div class="value">${d.meals.xe_total}<span class="unit">XE</span></div>
-            <div class="hint">${t('report_meals_count', { n: d.meals.count })}</div>
+            <div class="hint">${t('report_meals_count', { n: d.meals.count })}${d.meals.carbs_entries ? ' · ' + t('report_carbs_total', { g: d.meals.carbs_total_g, n: d.meals.carbs_entries }) : ''}</div>
           </div>
           <div class="metric">
             <div class="label">${t('report_xe_active_day')}</div>
@@ -539,6 +539,7 @@ function render(d) {
         <div style="font-size: 11px; color: var(--muted); padding: 8px 10px; background: var(--panel-2); border-radius: 5px;">
           ${t('report_ic_note')}
         </div>
+        ${mealsTable(d.meals.entries)}
       </div>
     `);
   }
@@ -601,12 +602,14 @@ function render(d) {
           <thead><tr><th>${t('report_when')}</th><th>${t('type_label')}</th><th>${t('value')}</th><th>${t('report_note')}</th></tr></thead>
           <tbody>
             ${d.notes.map(n => {
-              const unit = (n.type === 'bg' || n.type === 'ketones') ? 'mmol/L' : 'U';
-              const label = {bg:'BG', fast:t('type_fast'), slow:t('type_slow'), ketones:t('type_ketones')}[n.type];
+              // every type has a label/unit (meal rows used to show "undefined" and "U")
+              const unit = { bg: 'mmol/L', ketones: 'mmol/L', fast: 'U', slow: 'U', meal: 'XE', activity: t('min_short') }[n.type] || '';
+              const tk = n.type === 'device_change' ? 'type_device' : 'type_' + n.type;
+              const label = n.type === 'bg' ? 'BG' : (t(tk) !== tk ? t(tk) : n.type);
               return `<tr>
                 <td>${fmtDateTime(n.time)}</td>
-                <td>${label}</td>
-                <td>${n.value} ${unit}</td>
+                <td>${escapeHtml(label)}</td>
+                <td>${n.value} ${unit}${carbsMealTime(n)}</td>
                 <td>${escapeHtml(n.notes)}</td>
               </tr>`;
             }).join('')}
@@ -637,6 +640,29 @@ function episodesTable(eps, worstLabelKey) {
         <td>${t('report_ep_min', { n: e.duration_min })} · ${e.readings}×</td>
         <td><span class="badge ${bgClass(e.worst_value)}">${e.worst_value} mmol/L</span></td>
         <td>${e.meter ? `${e.meter.value} mmol/L <span style="color:var(--muted,#888)">(${e.meter.minutes_from_worst > 0 ? '+' : ''}${e.meter.minutes_from_worst} min)</span>` : '—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+// carbs in grams / separate meal start — shown only when present (older rows: nothing)
+function carbsMealTime(e) {
+  let out = '';
+  if (e.carbs_g != null && e.carbs_g > 0) out += ` · ${Math.round(e.carbs_g * 10) / 10} g`;
+  if (e.meal_time && e.meal_time !== e.time) out += ` · ${t('meal_time')}: ${fmtDateTime(e.meal_time)}`;
+  return out;
+}
+function mealsTable(entries) {
+  if (!entries || !entries.length) return '';
+  return `
+    <h3>${t('report_meals_table')}</h3>
+    <table>
+      <thead><tr><th>${t('report_when')}</th><th>XE</th><th>${t('report_col_carbs')}</th><th>${t('meal_time')}</th><th>${t('report_note')}</th></tr></thead>
+      <tbody>${entries.slice().sort((a, b) => a.time < b.time ? 1 : -1).map(m => `<tr>
+        <td>${fmtDateTime(m.time)}</td>
+        <td>${m.value}</td>
+        <td>${m.carbs_g != null && m.carbs_g > 0 ? Math.round(m.carbs_g * 10) / 10 + ' g' : ''}</td>
+        <td>${m.meal_time && m.meal_time !== m.time ? fmtDateTime(m.meal_time) : ''}</td>
+        <td>${m.notes ? escapeHtml(m.notes) : ''}</td>
       </tr>`).join('')}</tbody>
     </table>`;
 }
