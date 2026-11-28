@@ -7,6 +7,11 @@ services:
       - "8765:8000"
     volumes:
       - ./data:/data
+      # P5: static is bind-mounted read-only, so static changes need no rebuild
+      # (app.py still does). Deploy static with `rsync -a --delete` INTO this
+      # directory — never mv/replace the directory itself: the mount follows the
+      # original directory inode and would keep serving the old one.
+      - ./static:/app/static:ro
       - ./juggluco_watermark.json:/app/juggluco_watermark.json
     environment:
       # === AUTH (all optional) ===
