@@ -211,6 +211,7 @@ async function doLogin() {
     const d = await res.json();
     setToken(d.token);
     hideAuthBanner();
+    try { localStorage.removeItem('diabet_api_key'); } catch (_) {}   // login mode: the token is the browser credential; a leftover key is stale
     document.getElementById('login-pass').value = '';
     hideLogin();
     loadData();

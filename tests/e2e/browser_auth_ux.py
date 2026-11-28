@@ -81,7 +81,9 @@ with sync_playwright() as pw:
     page.evaluate("localStorage.removeItem('diabet_token'); localStorage.setItem('diabet_api_key', 'stale-wrong-key')")
     page.reload(wait_until="networkidle"); page.wait_for_timeout(1200)
     check("стар ключ, без token → login формата е показана", visible(page, "#login"))
-    check("стар ключ → изчистен от localStorage", page.evaluate("localStorage.getItem('diabet_api_key')") is None)
+    page.fill("#login-user", env["DIABET_USERNAME"]); page.fill("#login-pass", env["DIABET_PASSWORD"])
+    page.click("button[onclick='doLogin()']"); page.wait_for_timeout(1500)
+    check("стар ключ → изчистен след login", page.evaluate("localStorage.getItem('diabet_api_key')") is None)
 
     print("== B1: logout чисти всички креди")
     login(page, BASE)
