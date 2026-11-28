@@ -193,7 +193,7 @@ async function loadData() {
 
   setStatusText(() => t('meal_loading'));
   try {
-    const params = new URLSearchParams({ limit: '20000' });
+    const params = new URLSearchParams();   // no limit: 'all' must not be cut at 20k
     if (cutoff > 0) params.set('from', new Date(cutoff).toISOString());
     if (sel === 'custom') params.set('to', new Date(upperBound).toISOString());
 

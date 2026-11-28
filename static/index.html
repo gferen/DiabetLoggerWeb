@@ -1754,10 +1754,11 @@ async function deleteEntry(id) {
 
 // Дърпаме само избрания период, не цялата база. При CGM (~288 записа/ден)
 // default-ният 24ч изглед сваля ~290 реда вместо няколко десетки хиляди.
+// 'all' really is all rows: the server no longer caps an unbounded query at 20k.
 function entriesPath() {
-  if (currentRange === 'all') return '/entries?limit=20000';
+  if (currentRange === 'all') return '/entries';
   const from = new Date(Date.now() - currentRange * 86400000).toISOString();
-  return `/entries?limit=20000&from=${encodeURIComponent(from)}`;
+  return `/entries?from=${encodeURIComponent(from)}`;
 }
 
 async function reload() {

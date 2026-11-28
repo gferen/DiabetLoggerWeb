@@ -619,7 +619,8 @@ async function drawChart(d) {
   if (!canvas) return;
 
   // Fetch full entries for the period to draw the chart
-  const entries = await api(`/entries?limit=20000`);
+  // Only the report period — the newest-20k cut used to leave older periods blank.
+  const entries = await api(`/entries?from=${encodeURIComponent(d.period.from)}&to=${encodeURIComponent(d.period.to)}`);
   const fromT = new Date(d.period.from).getTime();
   const toT = new Date(d.period.to).getTime();
   const inRange = e => {
