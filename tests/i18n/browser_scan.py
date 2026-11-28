@@ -46,6 +46,7 @@ def seed():
         ]
     for i in range(0, len(batch), 10):
         post("/api/entries/batch", {"entries": batch[i:i + 10]})
+    post("/api/entries", {"type": "fast", "value": 2, "time": (now - timedelta(minutes=30)).isoformat(), "notes": "recent"})  # → stacking warning
     try:
         post("/api/profiles", {"name": "Profile A", "active_from": (now - timedelta(days=5)).date().isoformat(),
                                "basal": [0.5] * 24, "isf": [], "cr": [], "notes": "test"})
@@ -76,11 +77,24 @@ def problems(texts):
     keys = [m for t in texts for m in KEYLIKE.findall(t) if m not in KEY_ALLOW and not t.startswith("[")]
     return cyr, keys
 
+def meal_walk(p):
+    """Every tab, plus every calculator message state (server sends codes → UI translates)."""
+    texts = []
+    for tb in p.evaluate("[...document.querySelectorAll('.tab[data-tab]')].map(t => t.dataset.tab)"):
+        p.click(f".tab[data-tab='{tb}']"); p.wait_for_timeout(300); texts += visible_texts(p)
+    p.click(".tab[data-tab='meal']") if p.query_selector(".tab[data-tab='meal']") else None
+    for bg, xe in (("3.5", "3"), ("16", "7")):          # hypo block; ketones + >20 U + stacking
+        p.fill("#m-bg", bg); p.fill("#m-xe", xe); p.dispatch_event("#m-xe", "input"); p.wait_for_timeout(1200)
+        texts += visible_texts(p)
+    if p.query_selector(".tab[data-tab='evening']"):
+        p.click(".tab[data-tab='evening']"); p.fill("#e-bg", "3.5"); p.dispatch_event("#e-bg", "input"); p.wait_for_timeout(1200)
+        texts += visible_texts(p)
+    return texts
+
 PAGES = {
     "index": ("/", lambda p: [p.evaluate(f"selectEntryType('{ty}')") or p.wait_for_timeout(150) for ty in
                               p.evaluate("[...document.querySelectorAll('.type-chip[data-type]')].map(c => c.dataset.type)")]),
-    "meal": ("/static/meal.html", lambda p: [p.click(f".tab[data-tab='{tb}']") or p.wait_for_timeout(300) for tb in
-                                             p.evaluate("[...document.querySelectorAll('.tab[data-tab]')].map(t => t.dataset.tab)")]),
+    "meal": ("/static/meal.html", lambda p: meal_walk(p)),
     "report": ("/static/report.html", None),
     "print-review": ("/static/print-review.html", None),
     "profiles": ("/static/profiles.html", None),
@@ -109,12 +123,17 @@ with sync_playwright() as pw:
             page.goto(BASE + path, wait_until="networkidle"); page.wait_for_timeout(1500)
             texts = visible_texts(page)
             if walk:
-                walk(page)   # visit every tab / entry type; collect after each
-                texts += visible_texts(page)
+                extra = walk(page)   # visit every tab / entry type / calculator state
+                texts += visible_texts(page) + [x for x in (extra or []) if isinstance(x, str)]
             cyr, keys = ([], []) if lang == "bg" else problems(texts)
             if lang == "bg":
                 _, keys = problems(texts)
             bad = len(set(cyr)) + len(set(keys))
+            if name == "meal" and lang in ("en", "de"):   # the calculator warnings must really have rendered
+                must = {"en": ["Hypoglycaemia", "Check ketones", "> 20 U", "insulin stacking"],
+                        "de": ["Hypoglykämie", "Ketone messen", "> 20 U", "Überlagerung"]}[lang]
+                missing = [m for m in must if not any(m in x for x in texts)]
+                if missing: print(f"    {lang} meal: calculator messages NOT shown: {missing}"); bad += len(missing)
             fails += bad
             row.append(f"{name}:{'OK' if not bad else bad}({len(set(texts))})")
             for c in sorted(set(cyr))[:8]: print(f"    {lang} {name} CYR: {c[:90]}")

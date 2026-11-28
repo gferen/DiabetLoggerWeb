@@ -574,6 +574,8 @@ def calc_dose(payload: DoseCalcPayload):
             "blocked": True,
             "reason": "hypo",
             "message": f"Хипогликемия (BG {bg} < {s['hypo_threshold']}). Приеми 15-20g бързи въглехидрати, изчакай 15 мин, ретестирай. Не инжектирай инсулин преди BG > {s['hypo_threshold']}.",
+            # code/params: the UI shows the message translated; text above stays the BG source
+            "code": "hypo_block", "params": {"bg": bg, "thr": s["hypo_threshold"]},
             "recommended_units": 0,
         }
 
@@ -598,6 +600,7 @@ def calc_dose(payload: DoseCalcPayload):
         warnings.append({
             "level": "danger",
             "message": f"BG {bg} ≥ {s['ketones_check_threshold']} mmol/L. Изтегли кетони преди инжектиране. При кетони ≥ 1.5 mmol/L → контакт с лекар.",
+            "code": "ketones_check", "params": {"bg": bg, "thr": s["ketones_check_threshold"]},
         })
 
     # Insulin stacking check — last fast entry within stacking hours
@@ -612,12 +615,14 @@ def calc_dose(payload: DoseCalcPayload):
         warnings.append({
             "level": "warn",
             "message": f"Последна бърза доза {recent['value']} U преди < {stack_hours}ч (insulin stacking риск).",
+            "code": "stacking", "params": {"u": recent["value"], "h": stack_hours},
         })
 
     if total > 20:
         warnings.append({
             "level": "warn",
             "message": f"Изчислена доза > 20 U. Провери преди инжектиране.",
+            "code": "dose_over_20", "params": {},
         })
 
     return {
@@ -629,6 +634,7 @@ def calc_dose(payload: DoseCalcPayload):
         "correction_units": correction,
         "recommended_units": total,
         "breakdown": f"{xe} XE × {ic} U/XE + {correction} корекция = {total} U",
+        "breakdown_params": {"xe": xe, "ic": ic, "corr": correction, "total": total},
         "warnings": warnings,
     }
 
@@ -642,6 +648,7 @@ def calc_evening(bg: float = Query(..., gt=0, le=30)):
             "blocked": True,
             "reason": "hypo",
             "message": f"Хипогликемия (BG {bg}). Приеми въглехидрати, изчакай, ретестирай.",
+            "code": "evening_hypo", "params": {"bg": bg},
             "snack_recommended": False,
             "slow_dose": 0,
         }

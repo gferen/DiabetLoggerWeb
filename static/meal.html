@@ -318,6 +318,16 @@ function fillBeerXE(liters) {
   autoCalc();
 }
 
+// Calculator messages: shown in the UI language via their code; the server's
+// Bulgarian text is the fallback if a translation is missing.
+function calcMsg(m) {
+  if (m && m.code) {
+    const key = 'calc_' + m.code, txt = t(key, m.params || {});
+    if (txt !== key) return escapeHtml(txt);
+  }
+  return escapeHtml((m && m.message) || '');
+}
+
 async function autoCalc() {
   const bg = parseFloat(document.getElementById('m-bg').value);
   const xe = parseFloat(document.getElementById('m-xe').value);
@@ -355,18 +365,18 @@ async function autoCalc() {
       resultEl.classList.add('blocked');
       resultEl.innerHTML = `
         <div class="dose-big blocked">${t('meal_blocked')}</div>
-        <div class="alert danger">${d.message}</div>
+        <div class="alert danger">${calcMsg(d)}</div>
         <div style="text-align:center;color:var(--muted);font-size:12px">${t('meal_blocked_hint')}</div>
       `;
       saveBtn.disabled = false;
       saveBtn.textContent = t('meal_save_no_insulin');
     } else {
       resultEl.classList.remove('blocked');
-      const warnings = d.warnings.map(w => `<div class="alert ${w.level}">${w.message}</div>`).join('');
+      const warnings = d.warnings.map(w => `<div class="alert ${w.level}">${calcMsg(w)}</div>`).join('');
       resultEl.innerHTML = `
         <div style="text-align:center;color:var(--muted);font-size:12px;text-transform:uppercase">${t('meal_recommended_dose')}</div>
         <div class="dose-big">${d.recommended_units} U</div>
-        <div class="breakdown">${d.breakdown}</div>
+        <div class="breakdown">${d.breakdown_params ? escapeHtml(t('calc_breakdown', d.breakdown_params)) : escapeHtml(d.breakdown)}</div>
         ${warnings}
       `;
       saveBtn.disabled = false;
@@ -515,7 +525,7 @@ async function autoCalcEvening() {
       resultEl.classList.add('blocked');
       resultEl.innerHTML = `
         <div class="dose-big blocked">${t('meal_hypo_blocked')}</div>
-        <div class="alert danger">${d.message}</div>
+        <div class="alert danger">${calcMsg(d)}</div>
       `;
       saveBtn.disabled = true;
       infoBox.innerHTML = '';

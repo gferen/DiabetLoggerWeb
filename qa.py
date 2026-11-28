@@ -1136,6 +1136,13 @@ e = c_a1.post('/api/calc-evening?bg=8.0', headers=HA1).json()
 check("вечер 8.0 → 15 U без снак", e['slow_dose'] == 15 and e['snack_recommended'] is False, e)
 e = c_a1.post('/api/calc-evening?bg=3.5', headers=HA1).json()
 check("вечер 3.5 → блокирано, 0 U", e['blocked'] is True and e['slow_dose'] == 0, e)
+# кодове за превод на клиничните съобщения (текстът на сървъра е непроменен)
+d = dose(3.5, 3); check("код hypo_block + params, BG текстът е същият", d.get('code') == 'hypo_block' and d['params'] == {'bg': 3.5, 'thr': 4.0} and d['message'].startswith('Хипогликемия (BG 3.5 < 4.0)'), d)
+d = dose(16.0, 7); codes = {w.get('code') for w in d['warnings']}
+check("кодове ketones_check, dose_over_20, stacking", {'ketones_check', 'dose_over_20', 'stacking'} <= codes, codes)
+check("breakdown_params = числата от breakdown", d['breakdown_params'] == {'xe': 7, 'ic': 3.0, 'corr': 2.0, 'total': 23.0}, d.get('breakdown_params'))
+e = c_a1.post('/api/calc-evening?bg=3.5', headers=HA1).json()
+check("код evening_hypo", e.get('code') == 'evening_hypo' and e['params'] == {'bg': 3.5}, e)
 c_a1.delete('/api/entries', headers=HA1)
 
 
