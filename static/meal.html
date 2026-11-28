@@ -226,7 +226,7 @@ async function api(path, opts = {}) {
     if (authMode === 'login') { clearToken(); showLogin(); }
     throw new Error('Unauthorized');
   }
-  if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+  if (!res.ok) { const err = new Error(apiErrorText(res.status, await res.text())); err.status = res.status; throw err; }
   return res.status === 204 ? null : res.json();
 }
 
@@ -329,6 +329,16 @@ async function autoCalc() {
     saveBtn.disabled = true;
     return;
   }
+  // Never compute a dose from a BG that is probably mg/dL.
+  if (bg > 30) {
+    calcData = null;
+    resultEl.style.display = 'block';
+    resultEl.classList.add('blocked');
+    resultEl.textContent = t('hint_bg_mgdl', { v: bg, mmol: (Math.round(bg / 18 * 10) / 10) });
+    overrideBlock.style.display = 'none';
+    saveBtn.disabled = true;
+    return;
+  }
 
   try {
     const d = await api('/calc-dose', {
@@ -388,13 +398,36 @@ document.addEventListener('input', (e) => {
   if (e.target.id === 'm-override') updateSaveBtnLabel();
 });
 
+// Read a number input and check it against the input's min/max (and > 0).
+// Shows a toast and returns null if invalid. bg also gets the mg/dL hint.
+function readValidNumber(id, { isBg = false } = {}) {
+  const inp = document.getElementById(id);
+  let v = parseFloat(inp.value);
+  if (isNaN(v)) { toast(t('toast_value_required'), 'error'); inp.focus(); return null; }
+  if (isBg) {
+    v = bgMgdlGuard(v);
+    if (v === null) return null;
+    inp.value = v;
+  }
+  if (v <= 0) { toast(t('toast_value_positive'), 'error'); inp.focus(); return null; }
+  const min = parseFloat(inp.min), max = parseFloat(inp.max);
+  if ((!isNaN(min) && v < min) || (!isNaN(max) && v > max)) {
+    toast(t('toast_value_range', { min: isNaN(min) ? 0 : min, max: isNaN(max) ? '∞' : max }), 'error');
+    inp.focus(); return null;
+  }
+  return v;
+}
+
 async function saveMeal() {
   if (!calcData) return;
   const dt = readDatetime('m');
   if (!dt) { toast(t('meal_invalid_datetime'), 'error'); return; }
   const iso = dt.toISOString();
-  const bg = parseFloat(document.getElementById('m-bg').value);
-  const xe = parseFloat(document.getElementById('m-xe').value);
+  // Validate everything BEFORE anything is sent — no half-saved meal.
+  const bg = readValidNumber('m-bg', { isBg: true });
+  if (bg === null) return;
+  const xe = readValidNumber('m-xe');
+  if (xe === null) return;
   const food = document.getElementById('m-food').value.trim();
   const useOverride = document.getElementById('m-override-chk').checked;
   const overrideVal = parseFloat(document.getElementById('m-override').value);
@@ -409,24 +442,16 @@ async function saveMeal() {
   saveBtn.textContent = t('meal_saving');
 
   try {
-    // BG entry
-    await api('/entries', {
-      method: 'POST',
-      body: JSON.stringify({ type:'bg', value:bg, time:iso, notes: food ? `преди: ${food}` : 'преди хранене' })
-    });
-    // Meal entry (XE)
-    await api('/entries', {
-      method: 'POST',
-      body: JSON.stringify({ type:'meal', value:xe, time:iso, notes: food })
-    });
-    // Fast insulin entry (if not blocked)
+    // BG + meal (+ bolus) in ONE transaction: all saved or none.
+    const entries = [
+      { type:'bg', value:bg, time:iso, notes: food ? `преди: ${food}` : 'преди хранене' },
+      { type:'meal', value:xe, time:iso, notes: food },
+    ];
     if (insulin !== null && insulin > 0) {
       const insulinNotes = useOverride ? `override за ${xe} XE` : `за ${xe} XE (авто-калк)`;
-      await api('/entries', {
-        method: 'POST',
-        body: JSON.stringify({ type:'fast', value:insulin, time:iso, notes: insulinNotes })
-      });
+      entries.push({ type:'fast', value:insulin, time:iso, notes: insulinNotes });
     }
+    await api('/entries/batch', { method: 'POST', body: JSON.stringify({ entries }) });
 
     // Reset form
     document.getElementById('m-bg').value = '';
@@ -460,6 +485,14 @@ async function autoCalcEvening() {
     resultEl.style.display = 'none';
     saveBtn.disabled = true;
     infoBox.innerHTML = '';
+    return;
+  }
+  // Never compute a dose from a BG that is probably mg/dL.
+  if (bg > 30) {
+    evData = null;
+    resultEl.style.display = 'none';
+    saveBtn.disabled = true;
+    infoBox.textContent = t('hint_bg_mgdl', { v: bg, mmol: (Math.round(bg / 18 * 10) / 10) });
     return;
   }
 
@@ -501,20 +534,18 @@ async function saveEvening() {
   const dt = readDatetime('e');
   if (!dt) { toast(t('meal_invalid_datetime'), 'error'); return; }
   const iso = dt.toISOString();
-  const bg = parseFloat(document.getElementById('e-bg').value);
+  const bg = readValidNumber('e-bg', { isBg: true });
+  if (bg === null) return;
 
   const saveBtn = document.getElementById('e-save-btn');
   saveBtn.disabled = true;
 
   try {
-    await api('/entries', {
-      method: 'POST',
-      body: JSON.stringify({ type:'bg', value:bg, time:iso, notes: 'преди вечерна доза' + (evData.snack_recommended ? ' (+ снак)' : '') })
-    });
-    await api('/entries', {
-      method: 'POST',
-      body: JSON.stringify({ type:'slow', value:evData.slow_dose, time:iso, notes: 'вечерна доза' + (evData.snack_recommended ? ' след ' + evData.snack_desc : '') })
-    });
+    // BG + evening dose in ONE transaction: both saved or neither.
+    await api('/entries/batch', { method: 'POST', body: JSON.stringify({ entries: [
+      { type:'bg', value:bg, time:iso, notes: 'преди вечерна доза' + (evData.snack_recommended ? ' (+ снак)' : '') },
+      { type:'slow', value:evData.slow_dose, time:iso, notes: 'вечерна доза' + (evData.snack_recommended ? ' след ' + evData.snack_desc : '') },
+    ] }) });
 
     document.getElementById('e-bg').value = '';
     document.getElementById('ev-result').style.display = 'none';

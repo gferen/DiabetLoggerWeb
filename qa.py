@@ -185,7 +185,7 @@ check("Липсва time → 422", r.status_code == 422)
 r = client.post('/api/entries', json={'type': 'bg', 'time': '2026-07-01T10:00:00'}, headers=H)
 check("Липсва value → 422", r.status_code == 422)
 
-# Value bounds (Pydantic: gt=0, lt=100)
+# Value bounds (VALUE_RANGES: bg 1–30 mmol/L)
 r = client.post('/api/entries', json={'type': 'bg', 'value': 0, 'time': '2026-07-01T10:00:00'}, headers=H)
 check("value=0 → 422", r.status_code == 422)
 
@@ -193,10 +193,13 @@ r = client.post('/api/entries', json={'type': 'bg', 'value': -5, 'time': '2026-0
 check("Отрицателна value → 422", r.status_code == 422)
 
 r = client.post('/api/entries', json={'type': 'bg', 'value': 100, 'time': '2026-07-01T10:00:00'}, headers=H)
-check("value=100 → 422 (lt=100)", r.status_code == 422)
+check("value=100 → 422", r.status_code == 422)
 
-r = client.post('/api/entries', json={'type': 'bg', 'value': 99.9, 'time': '2026-07-01T10:00:00'}, headers=H)
-check("value=99.9 → 200", r.status_code == 200)
+r = client.post('/api/entries', json={'type': 'bg', 'value': 30.1, 'time': '2026-07-01T10:00:00'}, headers=H)
+check("bg=30.1 → 422 (max 30 mmol/L)", r.status_code == 422)
+
+r = client.post('/api/entries', json={'type': 'bg', 'value': 30, 'time': '2026-07-01T10:00:00'}, headers=H)
+check("bg=30 → 200 (граница)", r.status_code == 200)
 # Изтрий го веднага, за да не замърсява тестовете
 client.delete(f"/api/entries/{r.json()['id']}", headers=H)
 
@@ -298,7 +301,7 @@ check("days=-5 → 200 (нормализира на 1)", r.status_code == 200)
 # 5.5 Много стар запис - не трябва да е в stats period
 client.delete('/api/entries', headers=H)
 old = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
-client.post('/api/entries', json={'type': 'bg', 'value': 100.0-0.01, 'time': old}, headers=H)
+client.post('/api/entries', json={'type': 'bg', 'value': 25.0, 'time': old}, headers=H)
 r = client.get('/api/stats?days=7', headers=H)
 check("Old record (365d) не се брои в days=7 stats", r.json()['bg_count'] == 0)
 r = client.get('/api/stats?days=400', headers=H)
@@ -805,6 +808,107 @@ check("profiles DELETE 404 (вече изтрит)", r.status_code == 404, f"got
 client.delete(f'/api/profiles/{pid2}', headers=H)
 r = client.get('/api/profiles', headers=H)
 check("profiles: cleanup OK (0 записа)", len(r.json()) == 0, f"got {len(r.json())}")
+
+
+# ========== 13. P0: ЧЕТИМИ 422 + ДИАПАЗОНИ + АТОМАРЕН BATCH ==========
+section("13. P0 — четими 422, диапазони по тип, атомарен batch")
+client.delete('/api/entries', headers=H)
+T0 = '2027-01-01T08:00:00+00:00'
+
+def n_entries():
+    return len(client.get('/api/entries', headers=H).json())
+
+# --- 422 пази detail (list) и добавя message ---
+r = client.post('/api/entries', json={'type':'bg','value':120,'time':T0}, headers=H)
+j = r.json()
+check("422 bg=120: detail е list", r.status_code == 422 and isinstance(j.get('detail'), list), str(j)[:200])
+check("422 bg=120: message е четим (без JSON)", isinstance(j.get('message'), str) and 'mmol/L' in j['message'] and '{' not in j['message'], j.get('message'))
+check("422 bg=120: подсказка за mg/dL", 'mg/dL' in j.get('message', ''), j.get('message'))
+r = client.post('/api/entries', json={'type':'bg','value':None,'time':T0}, headers=H)
+check("422 value=null: message назовава полето", r.status_code == 422 and 'value' in r.json().get('message',''), r.text[:200])
+
+# --- диапазони по тип: (тип, валидна, невалидна) ---
+cases = [('bg',1,0.9),('bg',30,30.1),('fast',0.05,0.01),('fast',50,50.5),('slow',50,51),
+         ('ketones',0,10.1),('meal',1e-9,0),('meal',99,100),('activity',600,601),('activity',1,0.5),
+         ('alcohol',0.5,0.4),('alcohol',10,11),('device_change',0,100)]
+for i,(typ, ok_v, bad_v) in enumerate(cases):
+    t = f'2027-01-02T{i:02d}:00:00+00:00'
+    r = client.post('/api/entries', json={'type':typ,'value':ok_v,'time':t}, headers=H)
+    check(f"{typ}={ok_v:g} → 200", r.status_code == 200, f"got {r.status_code} {r.text[:150]}")
+    r = client.post('/api/entries', json={'type':typ,'value':bad_v,'time':t.replace('2027-01-02','2027-01-03')}, headers=H)
+    check(f"{typ}={bad_v:g} → 422", r.status_code == 422, f"got {r.status_code}")
+r = client.post('/api/entries', json={'type':'fast','value':2,'carbs_g':0,'time':T0}, headers=H)
+check("fast carbs_g=0 → 422", r.status_code == 422)
+
+# --- batch: всички валидни → 200, всички записани ---
+client.delete('/api/entries', headers=H)
+batch = {'entries': [
+    {'type':'bg','value':6.7,'time':T0,'notes':'преди хранене'},
+    {'type':'meal','value':3,'time':T0},
+    {'type':'fast','value':4.5,'time':T0},
+]}
+r = client.post('/api/entries/batch', json=batch, headers=H)
+check("batch 3 валидни → 200", r.status_code == 200, r.text[:200])
+check("batch: count=3", r.json().get('count') == 3)
+check("batch: 3 реда в базата", n_entries() == 3, str(n_entries()))
+
+# --- повторение на същия batch (retry) → 200, без дубли ---
+r = client.post('/api/entries/batch', json=batch, headers=H)
+check("batch retry → 200", r.status_code == 200, r.text[:200])
+check("batch retry: всички duplicate=true", all(e.get('duplicate') for e in r.json().get('entries', [])))
+check("batch retry: пак 3 реда", n_entries() == 3, str(n_entries()))
+
+# --- невалиден 2-ри елемент → 422, НИЩО не е записано ---
+client.delete('/api/entries', headers=H)
+T1 = '2027-01-04T08:00:00+00:00'
+r = client.post('/api/entries/batch', json={'entries': [
+    {'type':'bg','value':6.7,'time':T1}, {'type':'meal','value':0,'time':T1}, {'type':'fast','value':3,'time':T1}]}, headers=H)
+check("batch с невалиден meal → 422", r.status_code == 422, f"got {r.status_code}")
+check("batch 422: message сочи елемента (entries.1)", 'entries.1' in r.json().get('message',''), r.json().get('message'))
+check("batch 422: 0 реда (няма частичен запис)", n_entries() == 0, str(n_entries()))
+
+# --- лошо време на 3-ти елемент → 400, НИЩО не е записано ---
+r = client.post('/api/entries/batch', json={'entries': [
+    {'type':'bg','value':6.7,'time':T1}, {'type':'meal','value':2,'time':T1}, {'type':'fast','value':3,'time':'not-a-date'}]}, headers=H)
+check("batch с лошо време → 400", r.status_code == 400, f"got {r.status_code}")
+check("batch 400: detail сочи entries.2", 'entries.2' in str(r.json().get('detail','')), r.text[:200])
+check("batch 400: 0 реда (няма частичен запис)", n_entries() == 0, str(n_entries()))
+
+# --- DB грешка по средата → rollback на вече вмъкнатите ---
+import sqlite3 as _sq
+_orig = app_mod._insert_entry
+_calls = {'n': 0}
+def _boom(c, e, t, mt):
+    _calls['n'] += 1
+    if _calls['n'] == 2:
+        raise _sq.OperationalError("simulated failure mid-batch")
+    return _orig(c, e, t, mt)
+app_mod._insert_entry = _boom
+try:
+    c_raise = TestClient(app_mod.app, raise_server_exceptions=False)
+    r = c_raise.post('/api/entries/batch', json={'entries': [
+        {'type':'bg','value':6.7,'time':T1}, {'type':'meal','value':2,'time':T1}]}, headers=H)
+finally:
+    app_mod._insert_entry = _orig
+check("batch: грешка по средата → 500", r.status_code == 500, f"got {r.status_code}")
+check("batch: rollback — 0 реда", n_entries() == 0, str(n_entries()))
+
+# --- празен / твърде голям batch ---
+r = client.post('/api/entries/batch', json={'entries': []}, headers=H)
+check("batch празен → 422", r.status_code == 422)
+r = client.post('/api/entries/batch', json={'entries': [{'type':'bg','value':5,'time':f'2027-02-01T{i:02d}:00:00'} for i in range(11)]}, headers=H)
+check("batch 11 елемента → 422 (max 10)", r.status_code == 422)
+r = TestClient(app_mod.app).post('/api/entries/batch', json=batch)
+check("batch без auth → 401", r.status_code == 401, f"got {r.status_code}")
+
+# --- калкулатор: BG > 30 (вероятно mg/dL) не дава доза ---
+r = client.post('/api/calc-dose', json={'bg': 95, 'xe': 3}, headers=H)
+check("calc-dose bg=95 → 422 (не смята доза от mg/dL)", r.status_code == 422, f"got {r.status_code}")
+r = client.post('/api/calc-dose', json={'bg': 7, 'xe': 3}, headers=H)
+check("calc-dose bg=7 → 200", r.status_code == 200, f"got {r.status_code}")
+r = client.post('/api/calc-evening?bg=95', headers=H)
+check("calc-evening bg=95 → 422", r.status_code == 422, f"got {r.status_code}")
+client.delete('/api/entries', headers=H)
 
 
 # ========== FINAL REPORT ==========

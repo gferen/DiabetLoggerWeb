@@ -124,3 +124,27 @@ function buildLangSelector() {
 
 _domReady.then(buildLangSelector);
 i18nReady();   // start fetching the dictionary immediately
+
+// ---------- shared: readable API error text ----------
+// Server errors come as {"detail": "..."} (400/404/502) or, for 422,
+// {"detail": [{msg, loc, ...}], "message": "..."}. Never show raw JSON to the user.
+function apiErrorText(status, bodyText) {
+  try {
+    const j = JSON.parse(bodyText);
+    if (j && typeof j.message === 'string' && j.message) return j.message;
+    if (j && typeof j.detail === 'string') return j.detail;
+    if (j && Array.isArray(j.detail) && j.detail[0]) {
+      return String(j.detail[0].msg || '').replace(/^Value error, /, '') || ('HTTP ' + status);
+    }
+  } catch (_) { /* not JSON */ }
+  const txt = String(bodyText || '').trim();
+  return txt ? `${status}: ${txt.slice(0, 200)}` : ('HTTP ' + status);
+}
+
+// BG entered in mg/dL by habit (> 30 can't be mmol/L): offer the conversion,
+// never convert silently. Returns the value to use, or null to abort.
+function bgMgdlGuard(v) {
+  if (!(v > 30)) return v;
+  const mmol = Math.round(v / 18 * 10) / 10;
+  return confirm(t('confirm_bg_mgdl', { v, mmol })) ? mmol : null;
+}

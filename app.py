@@ -19,9 +19,11 @@ from typing import Optional, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import jwt
-from fastapi import FastAPI, HTTPException, Header, Depends, Query
+from fastapi import FastAPI, HTTPException, Header, Depends, Query, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
@@ -360,10 +362,50 @@ def check_auth(
     raise HTTPException(status_code=401, detail="Unauthorized")
 
 
+# ---------- VALIDATION ERRORS ----------
+@app.exception_handler(RequestValidationError)
+async def _validation_error_handler(request: Request, exc: RequestValidationError):
+    """422 keeps FastAPI's `detail` list (scripts/qa.py rely on it) and adds a
+    one-line human `message` for the UI toast."""
+    errors = exc.errors()
+    first = errors[0] if errors else {}
+    msg = str(first.get("msg", "Invalid input")).removeprefix("Value error, ")
+    loc = [str(x) for x in first.get("loc", ()) if x != "body"]
+    if loc:
+        msg = f"{'.'.join(loc)}: {msg}"
+    # Log the offending body for entry writes only — /api/login bodies carry a
+    # password, so they are never logged. Headers (auth) are never logged.
+    if request.url.path.startswith("/api/entries"):
+        try:
+            body = json.dumps(exc.body, ensure_ascii=False, default=str)[:2000]
+        except Exception:
+            body = "<unserializable>"
+        print(f"[422] {request.method} {request.url.path} {msg} | body={body}", flush=True)
+    return JSONResponse(
+        status_code=422,
+        content=jsonable_encoder({"detail": errors, "message": msg}),
+    )
+
+
 # ---------- MODELS ----------
+# Allowed value per entry type: (min, max, min_exclusive, max_exclusive, unit).
+# Real data on NOMAD (2026-11-28) fits all of these. meal/ketones rows use 1e-9
+# as a "zero" sentinel, hence meal is just "> 0".
+VALUE_RANGES = {
+    "bg":            (1,    30,  False, False, "mmol/L"),
+    "fast":          (0.05, 50,  False, False, "U"),
+    "slow":          (0.05, 50,  False, False, "U"),
+    "ketones":       (0,    10,  False, False, "mmol/L"),
+    "meal":          (0,    100, True,  True,  "XE"),
+    "activity":      (1,    600, False, False, "min"),
+    "alcohol":       (0.5,  10,  False, False, "drinks"),
+    "device_change": (0,    100, False, True,  ""),
+}
+
+
 class EntryIn(BaseModel):
     type: Literal["bg", "fast", "slow", "ketones", "meal", "activity", "alcohol", "device_change"]
-    value: float = Field(0, ge=0, le=600)
+    value: float = Field(0, ge=0)
     time: str
     notes: Optional[str] = ""
     meal_time: Optional[str] = None       # ISO8601 - начало на хранене, отделно от 'time' (момент на дозата)
@@ -372,13 +414,23 @@ class EntryIn(BaseModel):
 
     @model_validator(mode="after")
     def _check_value_by_type(self):
-        # device_change няма реална числова стойност - 0 е позволено.
-        # Всички други типове пазят старото поведение: value е задължителна и > 0.
-        if self.type not in ("device_change", "ketones") and self.value <= 0:
-            raise ValueError("value must be > 0 for this type")
-        if self.type != "activity" and self.value >= 100:
-            raise ValueError("value must be < 100 for this type")
+        lo, hi, lo_excl, hi_excl, unit = VALUE_RANGES[self.type]
+        v = self.value
+        too_low = v <= lo if lo_excl else v < lo
+        too_high = v >= hi if hi_excl else v > hi
+        if too_low or too_high:
+            lo_s = f"> {lo:g}" if lo_excl else f"{lo:g}"
+            hi_s = f"< {hi:g}" if hi_excl else f"{hi:g}"
+            msg = f"{self.type} value must be {lo_s} … {hi_s} {unit}".rstrip() + f" (got {v:g})"
+            if self.type == "bg" and v > hi:
+                msg += f" — mg/dL? {v:g} mg/dL = {v / 18:.1f} mmol/L"
+            raise ValueError(msg)
         return self
+
+
+class EntryBatchIn(BaseModel):
+    """Several entries saved in one transaction (e.g. BG + meal + bolus)."""
+    entries: list[EntryIn] = Field(..., min_length=1, max_length=10)
 
 
 class ImportPayload(BaseModel):
@@ -486,7 +538,7 @@ def api_reset_settings():
 
 # ---------- API: DOSE CALCULATOR ----------
 class DoseCalcPayload(BaseModel):
-    bg: float = Field(..., gt=0, lt=100)
+    bg: float = Field(..., gt=0, le=30)   # mmol/L; > 30 is almost surely mg/dL
     xe: float = Field(..., ge=0, lt=30)
 
 
@@ -563,7 +615,7 @@ def calc_dose(payload: DoseCalcPayload):
 
 
 @app.post("/api/calc-evening", dependencies=[Depends(check_auth)])
-def calc_evening(bg: float = Query(..., gt=0, lt=100)):
+def calc_evening(bg: float = Query(..., gt=0, le=30)):
     """Evening slow-dose protocol."""
     s = get_settings()
     if bg < s["hypo_threshold"]:
@@ -660,46 +712,69 @@ def cgm_sync():
     return {"ok": True, "summary": summary, "stdout": result.stdout[-4000:]}
 
 
-@app.post("/api/entries", dependencies=[Depends(check_auth)])
-def add_entry(entry: EntryIn):
+def _entry_times(entry: EntryIn, where: str = ""):
+    """Parse time/meal_time to ISO. Raises 400 before anything is written."""
     try:
         t = datetime.fromisoformat(entry.time.replace("Z", "+00:00")).isoformat()
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid time format (ISO 8601 expected)")
+        raise HTTPException(status_code=400, detail=f"{where}Invalid time format (ISO 8601 expected)")
 
     meal_time_iso = None
     if entry.meal_time:
         try:
             meal_time_iso = datetime.fromisoformat(entry.meal_time.replace("Z", "+00:00")).isoformat()
         except ValueError:
-            raise HTTPException(status_code=400, detail="Invalid meal_time format (ISO 8601 expected)")
+            raise HTTPException(status_code=400, detail=f"{where}Invalid meal_time format (ISO 8601 expected)")
+    return t, meal_time_iso
 
+
+def _insert_entry(c, entry: EntryIn, t: str, meal_time_iso):
+    """INSERT one entry on an open connection (caller owns the transaction)."""
     meta_json = json.dumps(entry.meta) if entry.meta else None
+    try:
+        cur = c.execute(
+            "INSERT INTO entries (type, value, time, notes, meal_time, carbs_g, meta) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (entry.type, entry.value, t, entry.notes or "", meal_time_iso, entry.carbs_g, meta_json),
+        )
+    except sqlite3.IntegrityError:
+        # Same (type, time) already logged — CGM resend or double tap.
+        # Idempotent: return the existing row, do not insert a second copy.
+        row = c.execute(
+            "SELECT id, type, value, time, notes, meal_time, carbs_g, meta "
+            "FROM entries WHERE type=? AND time=?",
+            (entry.type, t),
+        ).fetchone()
+        if row is None:
+            raise
+        result = dict(row)
+        result["meta"] = json.loads(result["meta"]) if result["meta"] else None
+        result["duplicate"] = True
+        return result
+    return {
+        "id": cur.lastrowid, "type": entry.type, "value": entry.value, "time": t,
+        "notes": entry.notes or "", "meal_time": meal_time_iso,
+        "carbs_g": entry.carbs_g, "meta": entry.meta,
+    }
 
+
+@app.post("/api/entries", dependencies=[Depends(check_auth)])
+def add_entry(entry: EntryIn):
+    t, meal_time_iso = _entry_times(entry)
     with db() as c:
-        try:
-            cur = c.execute(
-                "INSERT INTO entries (type, value, time, notes, meal_time, carbs_g, meta) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (entry.type, entry.value, t, entry.notes or "", meal_time_iso, entry.carbs_g, meta_json),
-            )
-        except sqlite3.IntegrityError:
-            # Same (type, time) already logged — CGM resend or double tap.
-            # Idempotent: return the existing row, do not insert a second copy.
-            row = c.execute(
-                "SELECT id, type, value, time, notes, meal_time, carbs_g, meta "
-                "FROM entries WHERE type=? AND time=?",
-                (entry.type, t),
-            ).fetchone()
-            result = dict(row)
-            result["meta"] = json.loads(result["meta"]) if result["meta"] else None
-            result["duplicate"] = True
-            return result
-        return {
-            "id": cur.lastrowid, "type": entry.type, "value": entry.value, "time": t,
-            "notes": entry.notes or "", "meal_time": meal_time_iso,
-            "carbs_g": entry.carbs_g, "meta": entry.meta,
-        }
+        return _insert_entry(c, entry, t, meal_time_iso)
+
+
+@app.post("/api/entries/batch", dependencies=[Depends(check_auth)])
+def add_entries_batch(payload: EntryBatchIn):
+    """All-or-nothing: every entry is validated (422) and its time parsed (400)
+    before the first INSERT, and all INSERTs share one transaction — db() only
+    commits if no exception escapes. Duplicates (retry of a saved batch) are
+    returned with duplicate=true, same as the single-entry endpoint."""
+    times = [_entry_times(e, f"entries.{i}: ") for i, e in enumerate(payload.entries)]
+    with db() as c:
+        saved = [_insert_entry(c, e, t, mt) for e, (t, mt) in zip(payload.entries, times)]
+    return {"entries": saved, "count": len(saved)}
 
 
 @app.delete("/api/entries/{entry_id}", dependencies=[Depends(check_auth)])

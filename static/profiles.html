@@ -176,7 +176,7 @@ async function api(path, opts = {}) {
   const res = await fetch(API + path, { ...opts, headers });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(body || res.statusText);
+    throw new Error(body ? apiErrorText(res.status, body) : res.statusText);
   }
   return res.json();
 }

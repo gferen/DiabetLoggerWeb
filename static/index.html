@@ -1243,8 +1243,9 @@ async function api(path, opts = {}) {
     throw new Error('Unauthorized');
   }
   if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`${res.status}: ${t}`);
+    const err = new Error(apiErrorText(res.status, await res.text()));
+    err.status = res.status;
+    throw err;
   }
   return res.status === 204 ? null : res.json();
 }
@@ -1470,8 +1471,20 @@ async function addEntry(type) {
   if (type === 'device_change') {
     val = 0; // device_change няма реална числова стойност
   } else {
-    val = parseFloat(document.getElementById(`${type}-value`).value);
-    if (!val && val !== 0) { toast(t('toast_value_required'), true); return; }
+    const inp = document.getElementById(`${type}-value`);
+    val = parseFloat(inp.value);
+    if (isNaN(val)) { toast(t('toast_value_required'), true); return; }
+    if (type === 'bg') {
+      val = bgMgdlGuard(val);
+      if (val === null) return;
+      inp.value = val;
+    }
+    // Server requires > 0 for everything except ketones (device_change has no input).
+    if (type !== 'ketones' && val <= 0) { toast(t('toast_value_positive'), true); return; }
+    const min = parseFloat(inp.min), max = parseFloat(inp.max);
+    if ((!isNaN(min) && val < min) || (!isNaN(max) && val > max)) {
+      toast(t('toast_value_range', { min: isNaN(min) ? 0 : min, max: isNaN(max) ? '∞' : max }), true); return;
+    }
   }
 
   const dt = readDatetime(type);
@@ -1502,7 +1515,8 @@ async function addEntry(type) {
     const dur = document.getElementById('fast-bolus-duration').value;
     if (dur && payload.meta.bolus_kind !== 'normal') payload.meta.bolus_duration_min = parseInt(dur);
     const carbsRaw = document.getElementById('fast-carbs').value;
-    if (carbsRaw) payload.carbs_g = parseFloat(carbsRaw);
+    const carbs = parseFloat(carbsRaw);
+    if (carbs > 0) payload.carbs_g = carbs;   // server: carbs_g must be > 0, so 0/empty is omitted
     const mealToggle = document.getElementById('fast-meal-time-toggle');
     if (mealToggle.checked) {
       const mealDt = readDatetime('fast-meal');
