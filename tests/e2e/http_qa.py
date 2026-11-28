@@ -142,6 +142,16 @@ if s == 200:
             exp_ids |= {e.get("id") for e in v if isinstance(e, dict)}
 check("export → 200 и съдържа новите записи", s == 200 and all(i in exp_ids for i in saved_ids), f"{s} {type(j)} {list(j)[:10] if isinstance(j, dict) else ''}")
 
+print("== 6b. A1 дедуп / A2 обем")
+t = ts()
+s1, j1 = req("POST", "/api/entries", {"type": "bg", "value": 6.7, "time": t, "meta": {"source": "own"}}, HB)
+s2, j2 = req("POST", "/api/entries", {"type": "bg", "value": 12.5, "time": t, "meta": {"source": "own"}}, HB)
+check("A1: същата минута, друга стойност → нов ред", s2 == 200 and j2.get("duplicate") is None and j2["id"] != j1["id"], j2)
+s3, j3 = req("POST", "/api/entries", {"type": "bg", "value": 12.5, "time": t, "meta": {"source": "own"}}, HB)
+check("A1: идентичен повтор → duplicate, същия id", j3.get("duplicate") is True and j3["id"] == j2["id"], j3)
+s, rows = req("GET", "/api/entries", headers=H)
+check(f"A2: GET без limit → всички ({len(rows) if isinstance(rows, list) else '?'} реда, > 20000)", s == 200 and len(rows) > 20000, s)
+
 print("== 7. Статиката в image-а е новата")
 s, js = req("GET", "/static/i18n.js", raw=True)
 check("i18n.js съдържа apiErrorText + bgMgdlGuard", s == 200 and "apiErrorText" in js and "bgMgdlGuard" in js)
