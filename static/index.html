@@ -2637,9 +2637,9 @@ setInterval(() => {
   if (AUTO_SYNC_CGM) syncCgm(); else reload();
 }, 60000);
 // Непипнатите полета за час следват часовника, и когато се върнеш към раздела
-setInterval(() => syncNowFields(), 20000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) syncNowFields(); });
-window.addEventListener('focus', () => syncNowFields());
+setInterval(() => { if (_uiReady) syncNowFields(); }, 20000);
+document.addEventListener('visibilitychange', () => { if (_uiReady && !document.hidden) syncNowFields(); });
+window.addEventListener('focus', () => { if (_uiReady) syncNowFields(); });
 
 </script>
 </body>
