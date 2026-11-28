@@ -32,9 +32,9 @@ fi
 
 echo "== sync $REV → $TARGET"
 if [ "$TARGET" = live ]; then git archive HEAD docker-compose.yml | tar x -C "$STAGE"; COMPOSE="$STAGE/docker-compose.yml"; else COMPOSE=; fi
-OUT=$(rsync -ai --checksum -e "ssh -o BatchMode=yes" "$STAGE"/app.py "$STAGE"/juggluco_pull.py "$STAGE"/dedupe.py "$STAGE"/requirements.txt "$STAGE"/Dockerfile $COMPOSE "$HOST:$DIR/")
+OUT=$(rsync -rlci -e "ssh -o BatchMode=yes" "$STAGE"/app.py "$STAGE"/juggluco_pull.py "$STAGE"/dedupe.py "$STAGE"/requirements.txt "$STAGE"/Dockerfile $COMPOSE "$HOST:$DIR/")
 echo "$OUT"
-rsync -ai --checksum --delete --exclude='*.bak*' --exclude='*.OLD' --exclude='*.pre-*' -e "ssh -o BatchMode=yes" "$STAGE"/static/ "$HOST:$DIR/static/"
+rsync -rlci --delete --exclude='*.bak*' --exclude='*.OLD' --exclude='*.pre-*' -e "ssh -o BatchMode=yes" "$STAGE"/static/ "$HOST:$DIR/static/"
 if [ -n "$OUT" ] || [ "${FORCE_BUILD:-0}" = 1 ]; then
   echo "== python/Dockerfile changed → rebuild"
   ssh -o BatchMode=yes $HOST "cd $DIR && docker compose $PROJ up -d --build 2>&1 | tail -2"

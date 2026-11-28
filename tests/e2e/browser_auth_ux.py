@@ -86,7 +86,7 @@ with sync_playwright() as pw:
     check("стар ключ → изчистен след login", page.evaluate("localStorage.getItem('diabet_api_key')") is None)
 
     print("== B1: logout чисти всички креди")
-    login(page, BASE)
+    check("(предусловие) логнат", bool(page.evaluate("localStorage.getItem('diabet_token')")))
     page.evaluate("localStorage.setItem('diabet_api_key', 'some-key')")
     page.evaluate("logout()")
     check("logout → token и ключ изчистени",
