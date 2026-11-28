@@ -746,8 +746,10 @@ def cgm_sync():
         print(f"[cgm-sync] exit={result.returncode} {msg}", flush=True)
         raise HTTPException(status_code=502, detail=msg)
 
-    # Success: surface the last informative line (pushed X/Y entries...) for the toast.
-    summary = out_lines[-1] if out_lines else "no output"
+    # Success: report BOTH results (CGM + meter). The last line alone is the
+    # meter part and hid how many CGM readings were pulled.
+    done = [l.replace("[done]", "").strip() for l in out_lines if l.startswith("[done]")]
+    summary = " · ".join(done) if done else (out_lines[-1] if out_lines else "no output")
     return {"ok": True, "summary": summary, "warnings": err_lines[-5:], "stdout": result.stdout[-4000:]}
 
 

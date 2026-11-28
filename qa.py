@@ -1050,6 +1050,24 @@ for k in ('JUGGLUCO_HOST', 'JUGGLUCO_PORT', 'JUGGLUCO_API_SECRET'):
     os.environ.pop(k, None)
 
 
+# ========== 18. C1: CGM SYNC УСПЕХ — обобщение ==========
+section("18. C1 — успешен sync показва и CGM, и MBG")
+import subprocess as _sp
+class _R:
+    returncode = 0
+    stdout = "[info] incremental pull\n[done] CGM: pushed 3/3 entries. watermark updated\n[info] mbg\n[done] MBG: no new meter readings\n"
+    stderr = ""
+_orig_run = _sp.run
+_sp.run = lambda *a, **k: _R()
+try:
+    r = c_a1.post('/api/cgm-sync', headers=HA1)
+finally:
+    _sp.run = _orig_run
+summ = r.json().get('summary', '')
+check("успешен sync → 200", r.status_code == 200, r.status_code)
+check("успешен sync → обобщението има CGM и MBG", 'CGM: pushed 3/3' in summ and 'MBG' in summ, summ)
+
+
 # ========== FINAL REPORT ==========
 print("\n" + "="*60)
 print(f"РЕЗУЛТАТ: {PASSED} passed, {FAILED} failed")

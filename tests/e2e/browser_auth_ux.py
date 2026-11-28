@@ -114,8 +114,13 @@ with sync_playwright() as pw:
         page.wait_for_timeout(4000)
         check("грешката стои видима ≥ 4 s", page.evaluate("document.getElementById('toast').classList.contains('show')"))
     else:        # live: a real sync — the toast must report what happened
-        check(f"CGM sync успех → обобщение («{tt[:90]}»)", "pushed" in tt or "CGM" in tt, tt)
-    check("бутонът за sync е пак активен", not page.is_disabled("#cgm-sync-btn"))
+        check(f"CGM sync успех → обобщение с CGM и MBG («{tt[:110]}»)", "CGM" in tt and "MBG" in tt, tt)
+    try:
+        page.wait_for_function("!document.getElementById('cgm-sync-btn').disabled", timeout=20000)
+        enabled = True
+    except Exception:
+        enabled = False
+    check("бутонът за sync е пак активен (след reload)", enabled)
 
     page.goto(BASE + "/static/print-review.html", wait_until="networkidle"); page.wait_for_timeout(2500)
     txt = page.inner_text("body")
